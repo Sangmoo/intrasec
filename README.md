@@ -23,6 +23,15 @@
 | 민감정보 | 평문 `password:` 필드 거부(환경변수만), 근거의 쿠키·인증 헤더 마스킹 |
 | 웹 UI | `127.0.0.1` 전용, 실행별 랜덤 토큰, Host/Origin 검증 |
 
+## 개발 환경 준비
+
+| 도구 | 설치 |
+|---|---|
+| Go 1.27 이상 | https://go.dev/dl/ 에서 OS 별 설치 파일, 또는 Windows `winget install GoLang.Go` / macOS `brew install go` |
+| make (Windows) | `winget install ezwinports.make` 또는 Git Bash 에서 실행. make 없이도 `go build -o bin/intrasec.exe ./cmd/intrasec` 로 빌드 가능 |
+| golangci-lint (선택) | https://golangci-lint.run/welcome/install/ |
+| Docker (실습 환경, 선택) | https://docs.docker.com/get-docker/ |
+
 ## 빠른 시작
 
 ```bash
@@ -48,7 +57,7 @@ cmd/intrasec/          CLI (serve, scan, report, checks, scope, version)
 internal/scope/        scope.yaml 파싱·검증, IP 기준 허용 판단, 시간대 검사
 internal/transport/    공통 HTTP 클라이언트 (스코프·레이트리밋·리다이렉트 재검사·마스킹)
 internal/engine/       점검 오케스트레이션, 워커 풀, 레벨 강제
-internal/checks/       점검 플러그인 (common / weblogic / xplatform / groupware)
+internal/checks/       점검 플러그인 (common / php / weblogic / xplatform / groupware)
 internal/report/       HTML / JSON / Markdown / SARIF 리포트
 internal/audit/        감사 로그 (JSON Lines)
 internal/server/       로컬 웹 UI API (토큰, Host 검증)

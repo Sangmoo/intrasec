@@ -36,11 +36,19 @@ func (myCheck) Run(ctx context.Context, t checks.Target, s *checks.Session) ([]f
 - 새 패키지를 만들면 `cmd/intrasec/main.go` 에 blank import 를 추가한다.
 - `Finding.ID`, `FoundAt` 은 엔진이 채운다.
 
+### 경로 탐색 헬퍼 (`internal/checks/probe.go`)
+
+- `checks.Fetch(ctx, s, url)`: GET + 본문 읽기(최대 512KB). `Page.Evidence` 는 요청·응답 헤더만 담는다.
+- `checks.ProbeURLs(t, "/.git/HEAD")`: 웹 루트와 base_url 컨텍스트 경로 아래 URL 을 함께 만든다.
+- `s.NotFoundPage(ctx, t)` + `checks.Found(page, notFound)`: soft 404 서버 오탐 방지.
+- `checks.Abort(err)`: 자동 일시정지·취소면 탐색을 멈추고, 제외 경로 등은 건너뛴다.
+
 ## 3. 테스트
 
 - 판단 로직(`analyze...`)은 네트워크 없이 테스트할 수 있게 순수 함수로 분리한다.
 - `testdata/<패키지>/` 에 녹화된 HTTP 응답(원문 형식)을 두고 `http.ReadResponse` 로 읽어 검증한다.
 - 실제 사내 응답을 녹화할 때는 **호스트·IP·계정·세션 값·개인정보를 제거**한다 (gitleaks 가 CI 에서 검사).
+- 실제 요청 흐름 테스트는 `checkstest.Serve(t, checkstest.Files{...})` 로 로컬 서버와 Session 을 만든다.
 - 오탐 방지를 위해 "취약" 응답과 "안전" 응답 양쪽 케이스를 모두 둔다.
 
 ## 4. 체크리스트

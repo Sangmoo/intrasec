@@ -10,6 +10,7 @@ import (
 
 	// 점검 플러그인 등록
 	_ "github.com/Sangmoo/intrasec/internal/checks/common"
+	_ "github.com/Sangmoo/intrasec/internal/checks/php"
 )
 
 // 빌드 시 -ldflags 로 주입된다.

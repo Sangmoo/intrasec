@@ -41,6 +41,8 @@ type Target struct {
 // 플러그인은 반드시 HTTP 로만 요청해야 하며 자체 클라이언트를 만들면 안 된다.
 type Session struct {
 	HTTP *transport.Client
+
+	notFound sync.Map // 대상 base URL -> *Page (soft 404 기준선)
 }
 
 type Check interface {
