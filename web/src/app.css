@@ -112,3 +112,29 @@ progress { width: 100%; height: 12px; }
 .finding-head .target { font-size: 12px; word-break: break-all; }
 .finding-body { padding: 0 12px 8px; border-top: 1px solid var(--line); }
 .filters { margin-bottom: 8px; }
+
+/* 입력 양식 */
+fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; padding: 8px 14px 12px; }
+legend { font-weight: 700; padding: 0 6px; }
+.card h3 { font-size: 14px; margin: 18px 0 6px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 14px; }
+@media (max-width: 720px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+.req { color: var(--danger); }
+.label { display: block; margin: 10px 0 0; }
+.target { border: 1px dashed var(--line); border-radius: 6px; padding: 4px 12px 10px; margin-bottom: 10px; }
+select { display: block; width: 100%; margin-top: 4px; padding: 6px 8px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+button.small { padding: 3px 8px; font-size: 12px; }
+.ok { color: var(--ok); }
+details { margin: 8px 0; }
+details summary { cursor: pointer; color: var(--muted); }
+
+/* 점검 항목 선택 */
+.group-title { font-weight: 600; margin: 12px 0 6px; }
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+.check-card { display: block; margin: 0; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; opacity: 0.6; }
+.check-card.on { opacity: 1; border-color: var(--accent); }
+.check-head { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.check-card ul { margin: 6px 0 0; padding-left: 4px; list-style: none; font-size: 12px; }
+.check-card p { margin: 4px 0 0; font-size: 12px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }

@@ -1,34 +1,19 @@
 <script>
   import { api, fmtTime } from '../lib/api.js'
+  import ScopeForm from '../lib/ScopeForm.svelte'
   import ScopeSummary from '../lib/ScopeSummary.svelte'
-
-  const TEMPLATE = `engagement:
-  name: ""
-  approved_by: ""        # 승인자
-  approval_ref: ""       # 결재문서번호 / 승인 메일 제목
-  window:
-    start: "2026-11-10T19:00:00+09:00"
-    end:   "2026-11-10T23:00:00+09:00"
-
-targets:
-  - name: ERP
-    base_url: https://erp.example.local
-    tags: [weblogic]
-
-allow:
-  cidrs: [10.0.10.0/28]
-
-options:
-  safe_mode: true
-`
 
   let projects = $state([])
   let loadError = $state('')
   let name = $state('')
-  let yaml = $state(TEMPLATE)
+  let formYaml = $state('')
+  let rawMode = $state(false)
+  let rawYaml = $state('')
   let check = $state(null) // {ok, errors, summary}
   let saving = $state(false)
   let saveError = $state('')
+
+  const yaml = $derived(rawMode ? rawYaml : formYaml)
 
   async function load() {
     try {
@@ -38,6 +23,12 @@ options:
     }
   }
   load()
+
+  function toggleRaw() {
+    if (!rawMode) rawYaml = formYaml
+    rawMode = !rawMode
+    check = null
+  }
 
   async function validate() {
     check = await api('POST', '/api/scope/validate', { scope_yaml: yaml })
@@ -62,7 +53,7 @@ options:
   <h2>점검 프로젝트</h2>
   {#if loadError}<p class="error">{loadError}</p>{/if}
   {#if projects.length === 0}
-    <p class="muted">아직 프로젝트가 없습니다. 아래에서 scope 를 등록하십시오.</p>
+    <p class="muted">아직 프로젝트가 없습니다. 아래에서 점검 대상을 등록하십시오.</p>
   {:else}
     <table>
       <thead><tr><th>이름</th><th>등록일</th></tr></thead>
@@ -76,17 +67,30 @@ options:
 </section>
 
 <section class="card">
-  <h2>새 프로젝트</h2>
-  <p class="muted">승인자·승인 근거·점검 시간대가 없는 scope 는 저장할 수 없습니다. 비밀번호는 넣지 마십시오 (password_env 사용).</p>
-  <label>이름 <input bind:value={name} placeholder="예: 2026 정기점검 ERP" /></label>
-  <label>scope.yaml <textarea rows="22" spellcheck="false" bind:value={yaml}></textarea></label>
+  <div class="row between">
+    <h2>새 점검 대상 등록</h2>
+    <button class="small" onclick={toggleRaw}>{rawMode ? '입력 양식으로' : '고급: YAML 직접 입력'}</button>
+  </div>
+  <label>프로젝트 이름 <span class="req">*</span><input bind:value={name} placeholder="예: ERP 운영 WAS" /></label>
+
+  {#if rawMode}
+    <label>scope.yaml <textarea rows="24" spellcheck="false" bind:value={rawYaml}></textarea></label>
+  {:else}
+    <ScopeForm bind:yaml={formYaml} />
+    <details>
+      <summary>생성된 scope.yaml 보기</summary>
+      <pre>{formYaml}</pre>
+    </details>
+  {/if}
+
   <div class="row">
-    <button onclick={validate}>검증</button>
+    <button onclick={validate}>입력 확인</button>
     <button class="primary" disabled={saving || !name.trim()} onclick={save}>저장</button>
   </div>
   {#if saveError}<p class="error">{saveError}</p>{/if}
   {#if check}
     {#if check.ok}
+      <p class="ok">입력이 올바릅니다.</p>
       <ScopeSummary summary={check.summary} />
     {:else}
       <ul class="error">{#each check.errors as e}<li>{e}</li>{/each}</ul>

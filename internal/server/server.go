@@ -68,6 +68,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/projects/{id}/delete", s.deleteProject)
 	s.mux.HandleFunc("GET /api/projects/{id}/scans", s.listScans)
 	s.mux.HandleFunc("POST /api/scope/validate", s.validateScope)
+	s.mux.HandleFunc("POST /api/resolve", s.resolveHosts)
 	s.mux.HandleFunc("POST /api/scans", s.startScan)
 	s.mux.HandleFunc("GET /api/scans/{id}", s.getScan)
 	s.mux.HandleFunc("POST /api/scans/{id}/cancel", s.cancelScan)
@@ -174,6 +175,20 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-const placeholderPage = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>intrasec</title></head>
-<body><h1>intrasec</h1><p>웹 UI 가 빌드되지 않은 바이너리입니다. <code>make build</code> 로 빌드하거나 CLI(<code>intrasec scan</code>)를 사용하십시오.</p>
+// placeholderPage 는 웹 UI 없이 빌드된 바이너리(예: go build 만 실행)에서 보여 준다.
+const placeholderPage = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>intrasec - 웹 UI 없음</title></head>
+<body>
+<h1>intrasec</h1>
+<p><b>이 실행 파일에는 웹 화면이 포함되어 있지 않습니다.</b> (<code>go build</code> / <code>go run</code> 으로 직접 빌드하면 웹 UI 가 빠집니다)</p>
+<h2>방법 1. 릴리스 파일 사용 (권장)</h2>
+<ol>
+<li><a href="https://github.com/Sangmoo/intrasec/releases/latest" rel="noreferrer">GitHub Releases</a> 에서 <code>intrasec_&lt;버전&gt;_windows_amd64.zip</code> 을 받아 압축을 풉니다.</li>
+<li>PowerShell 에서 <code>.\intrasec.exe serve</code> 를 실행합니다.</li>
+</ol>
+<h2>방법 2. 소스에서 빌드 (Go, Node.js 필요)</h2>
+<ol>
+<li>프로젝트 폴더의 PowerShell 에서 <code>.\build.ps1 -Run</code> 을 실행합니다. (macOS/Linux: <code>make build</code>)</li>
+<li>웹 UI 가 포함된 <code>bin\intrasec.exe</code> 가 만들어지고 브라우저가 열립니다.</li>
+</ol>
+<p>지금 실행 중인 서버는 <code>Ctrl+C</code> 로 종료한 뒤 위 방법으로 다시 실행하십시오.</p>
 </body></html>`

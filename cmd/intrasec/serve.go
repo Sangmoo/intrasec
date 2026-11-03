@@ -46,7 +46,7 @@ func newServeCmd() *cobra.Command {
 			if ui, ok := web.Dist(); ok {
 				cfg.UI = ui
 			} else {
-				fmt.Fprintln(cmd.ErrOrStderr(), "주의: 웹 UI 가 빌드되지 않은 바이너리입니다 (make build 필요). API 만 동작합니다.")
+				fmt.Fprintln(cmd.ErrOrStderr(), "주의: 웹 UI 가 포함되지 않은 실행 파일입니다 (go build 로 직접 빌드한 경우). 릴리스 zip 을 쓰거나 .\\build.ps1 (macOS/Linux: make build) 로 빌드하십시오.")
 			}
 			s, err := server.New(cfg)
 			if err != nil {

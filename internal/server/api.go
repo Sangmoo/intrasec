@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -54,14 +55,17 @@ func storeError(w http.ResponseWriter, err error) {
 
 func (s *Server) listChecks(w http.ResponseWriter, _ *http.Request) {
 	type item struct {
-		ID    string   `json:"id"`
-		Name  string   `json:"name"`
-		Level string   `json:"level"`
-		Tags  []string `json:"tags"`
+		ID    string      `json:"id"`
+		Name  string      `json:"name"`
+		Level string      `json:"level"`
+		Tags  []string    `json:"tags"`
+		Items []checkItem `json:"items"`
+		Note  string      `json:"note,omitempty"`
 	}
 	out := []item{}
 	for _, c := range checks.All() {
-		out = append(out, item{c.ID(), c.Name(), c.Level().String(), c.Tags()})
+		d := checkDocs[c.ID()]
+		out = append(out, item{c.ID(), c.Name(), c.Level().String(), c.Tags(), d.items, d.note})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -125,6 +129,41 @@ func (s *Server) validateScope(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "summary": summarizeScope(c, sc)})
 }
 
+// resolveHosts 는 등록 화면에서 대상 호스트의 IP 를 확인해 allow.cidrs 작성을 돕는다.
+// DNS 조회만 하며 대상 서버로는 요청을 보내지 않는다.
+func (s *Server) resolveHosts(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Hosts []string `json:"hosts"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if len(req.Hosts) > 50 {
+		writeError(w, http.StatusBadRequest, "호스트는 최대 50개")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	out := map[string]any{}
+	for _, h := range req.Hosts {
+		h = strings.TrimSpace(h)
+		if h == "" {
+			continue
+		}
+		if ip := net.ParseIP(h); ip != nil {
+			out[h] = []string{ip.String()}
+			continue
+		}
+		addrs, err := net.DefaultResolver.LookupHost(ctx, h)
+		if err != nil {
+			out[h] = map[string]string{"error": "IP 확인 실패: " + err.Error()}
+			continue
+		}
+		out[h] = addrs
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
 // ---- 프로젝트 ----
 
 func (s *Server) listProjects(w http.ResponseWriter, r *http.Request) {
@@ -174,6 +213,7 @@ func (s *Server) getProject(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]any{"project": p}
 	if c, sc, errs := parseScope(p.ScopeYAML); errs == nil {
 		resp["summary"] = summarizeScope(c, sc)
+		resp["config"] = c
 	} else {
 		resp["errors"] = errs
 	}

@@ -16,68 +16,68 @@ import (
 )
 
 type Config struct {
-	Engagement   Engagement `yaml:"engagement"`
-	Targets      []Target   `yaml:"targets"`
-	Allow        Allow      `yaml:"allow"`
-	ExcludePaths []string   `yaml:"exclude_paths"`
-	Auth         []Auth     `yaml:"auth"`
-	Options      Options    `yaml:"options"`
+	Engagement   Engagement `yaml:"engagement" json:"engagement"`
+	Targets      []Target   `yaml:"targets" json:"targets"`
+	Allow        Allow      `yaml:"allow" json:"allow"`
+	ExcludePaths []string   `yaml:"exclude_paths" json:"exclude_paths"`
+	Auth         []Auth     `yaml:"auth" json:"auth"`
+	Options      Options    `yaml:"options" json:"options"`
 }
 
 type Engagement struct {
-	Name        string `yaml:"name"`
-	ApprovedBy  string `yaml:"approved_by"`
-	ApprovalRef string `yaml:"approval_ref"`
-	Window      Window `yaml:"window"`
+	Name        string `yaml:"name" json:"name"`
+	ApprovedBy  string `yaml:"approved_by" json:"approved_by"`
+	ApprovalRef string `yaml:"approval_ref" json:"approval_ref"`
+	Window      Window `yaml:"window" json:"window"`
 }
 
 type Window struct {
-	Start time.Time `yaml:"start"`
-	End   time.Time `yaml:"end"`
+	Start time.Time `yaml:"start" json:"start"`
+	End   time.Time `yaml:"end" json:"end"`
 }
 
 type Target struct {
-	Name    string   `yaml:"name"`
-	BaseURL string   `yaml:"base_url"`
-	Ports   []int    `yaml:"ports"`
-	Tags    []string `yaml:"tags"`
+	Name    string   `yaml:"name" json:"name"`
+	BaseURL string   `yaml:"base_url" json:"base_url"`
+	Ports   []int    `yaml:"ports" json:"ports"`
+	Tags    []string `yaml:"tags" json:"tags"`
 	// ServiceURLs 는 XPlatform/MiPlatform 등 서비스 호출 URL 이다 (base_url 기준 상대 경로 가능).
 	// 조회성 서비스만 넣어야 하며, 저장·삭제·결재 등으로 보이는 이름은 검증에서 거부된다.
-	ServiceURLs []string `yaml:"service_urls"`
+	ServiceURLs []string `yaml:"service_urls" json:"service_urls"`
 }
 
 // unsafeServiceName 은 데이터 변경을 유발할 수 있는 서비스 이름 패턴이다.
 var unsafeServiceName = regexp.MustCompile(`(?i)(save|insert|update|upd|modify|delete|del[A-Z_./]|remove|approv|submit|exec|create|regist|reg[A-Z_./]|send|upload|cancel|confirm|batch|logout)`)
 
 type Allow struct {
-	CIDRs []string `yaml:"cidrs"`
+	CIDRs []string `yaml:"cidrs" json:"cidrs"`
 }
 
 // Auth 는 대상별 인증 설정이다. 비밀번호는 평문으로 두지 않고 환경변수 이름만 받는다.
 type Auth struct {
-	Target        string `yaml:"target"`
-	Type          string `yaml:"type"`
-	LoginURL      string `yaml:"login_url"`
-	UsernameField string `yaml:"username_field"`
-	PasswordField string `yaml:"password_field"`
-	Username      string `yaml:"username"`
-	PasswordEnv   string `yaml:"password_env"`
+	Target        string `yaml:"target" json:"target"`
+	Type          string `yaml:"type" json:"type"`
+	LoginURL      string `yaml:"login_url" json:"login_url"`
+	UsernameField string `yaml:"username_field" json:"username_field"`
+	PasswordField string `yaml:"password_field" json:"password_field"`
+	Username      string `yaml:"username" json:"username"`
+	PasswordEnv   string `yaml:"password_env" json:"password_env"`
 	// CheckURL 은 로그인해야 열리는 페이지다. 로그인 성공 확인에 쓴다 (선택).
-	CheckURL string `yaml:"check_url"`
+	CheckURL string `yaml:"check_url" json:"check_url"`
 	// LoggedOutPattern 은 세션 만료(로그아웃 상태) 응답을 판별하는 정규식이다 (선택).
 	// 비우면 로그인 페이지로 리다이렉트되거나 401 이면 만료로 본다.
-	LoggedOutPattern string `yaml:"logged_out_pattern"`
+	LoggedOutPattern string `yaml:"logged_out_pattern" json:"logged_out_pattern"`
 }
 
 type Options struct {
-	RateLimit    float64 `yaml:"rate_limit"`
-	Concurrency  int     `yaml:"concurrency"`
-	ActiveChecks bool    `yaml:"active_checks"`
-	TimeoutSec   int     `yaml:"timeout_sec"`
+	RateLimit    float64 `yaml:"rate_limit" json:"rate_limit"`
+	Concurrency  int     `yaml:"concurrency" json:"concurrency"`
+	ActiveChecks bool    `yaml:"active_checks" json:"active_checks"`
+	TimeoutSec   int     `yaml:"timeout_sec" json:"timeout_sec"`
 	// SafeMode 는 운영 중인 시스템용 저부하 모드다. Effective() 참고.
-	SafeMode bool `yaml:"safe_mode"`
+	SafeMode bool `yaml:"safe_mode" json:"safe_mode"`
 	// MaxRequestsPerTarget 은 호스트당 요청(TLS 핸드셰이크 포함) 상한이다. 0 이면 무제한 (safe_mode 에서는 기본 60).
-	MaxRequestsPerTarget int `yaml:"max_requests_per_target"`
+	MaxRequestsPerTarget int `yaml:"max_requests_per_target" json:"max_requests_per_target"`
 	// PauseOn5xx 는 연속 5xx 응답이 이 횟수에 이르면 자동 일시정지한다. 0 이면 기본값 (일반 10, safe_mode 3).
 	PauseOn5xx int `yaml:"pause_on_5xx"`
 }

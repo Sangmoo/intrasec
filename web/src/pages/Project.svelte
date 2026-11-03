@@ -1,30 +1,36 @@
 <script>
   import { api, fmtTime, SEVERITIES } from '../lib/api.js'
   import ScopeSummary from '../lib/ScopeSummary.svelte'
+  import ScopeForm from '../lib/ScopeForm.svelte'
+  import CheckPicker from '../lib/CheckPicker.svelte'
 
   let { id } = $props()
 
   let project = $state(null)
   let summary = $state(null)
+  let config = $state(null)
   let scopeErrors = $state([])
   let scans = $state([])
   let error = $state('')
 
   // 점검 실행 옵션
   let safe = $state(true)
-  let only = $state('')
+  let only = $state([]) // 선택한 점검 ID (전체 선택이면 빈 배열)
+  let selectedCount = $state(1)
   let passwords = $state({})
   let confirmed = $state(false)
   let plan = $state(null)
   let runError = $state('')
   let busy = $state(false)
 
-  // scope 편집
+  // 대상 정보 수정
   let editing = $state(false)
-  let yaml = $state('')
+  let rawEdit = $state(false)
+  let formYaml = $state('')
+  let rawYaml = $state('')
   let editErrors = $state([])
 
-  // diff 선택
+  // 비교 선택
   let picked = $state([])
 
   async function load() {
@@ -32,8 +38,10 @@
       const r = await api('GET', `/api/projects/${id}`)
       project = r.project
       summary = r.summary || null
+      config = r.config || null
       scopeErrors = r.errors || []
-      yaml = project.scope_yaml
+      rawYaml = project.scope_yaml
+      if (summary?.safe_mode) safe = true
       scans = await api('GET', `/api/projects/${id}/scans`)
     } catch (e) {
       error = e.message
@@ -42,14 +50,16 @@
   load()
 
   function body(dryRun) {
-    return {
-      project_id: id,
-      safe,
-      dry_run: dryRun,
-      only: only.split(',').map((s) => s.trim()).filter(Boolean),
-      passwords: dryRun ? {} : passwords,
-    }
+    return { project_id: id, safe, dry_run: dryRun, only, passwords: dryRun ? {} : passwords }
   }
+
+  // 점검 항목·옵션이 바뀌면 이전 계획은 무효
+  $effect(() => {
+    only
+    safe
+    plan = null
+    confirmed = false
+  })
 
   async function dryRun() {
     runError = ''
@@ -77,7 +87,7 @@
   async function saveScope() {
     editErrors = []
     try {
-      await api('POST', `/api/projects/${id}`, { scope_yaml: yaml })
+      await api('POST', `/api/projects/${id}`, { scope_yaml: rawEdit ? rawYaml : formYaml })
       editing = false
       await load()
     } catch (e) {
@@ -109,33 +119,48 @@
     <div class="row between">
       <h2>{project.name}</h2>
       <div class="row">
-        <button onclick={() => (editing = !editing)}>{editing ? '편집 취소' : 'scope 편집'}</button>
+        <button onclick={() => (editing = !editing)}>{editing ? '수정 취소' : '대상 정보 수정'}</button>
         <button class="danger" onclick={remove}>삭제</button>
       </div>
     </div>
-    {#if summary}<ScopeSummary {summary} />{/if}
+    {#if summary && !editing}<ScopeSummary {summary} />{/if}
     {#if scopeErrors.length}<ul class="error">{#each scopeErrors as e}<li>{e}</li>{/each}</ul>{/if}
     {#if editing}
-      <textarea rows="22" spellcheck="false" bind:value={yaml}></textarea>
+      <div class="row">
+        <button class="small" onclick={() => (rawEdit = !rawEdit)}>{rawEdit ? '입력 양식으로' : '고급: YAML 직접 수정'}</button>
+      </div>
+      {#if rawEdit || !config}
+        <textarea rows="22" spellcheck="false" bind:value={rawYaml}></textarea>
+      {:else}
+        <ScopeForm {config} bind:yaml={formYaml} />
+      {/if}
       <button class="primary" onclick={saveScope}>저장</button>
       {#if editErrors.length}<ul class="error">{#each editErrors as e}<li>{e}</li>{/each}</ul>{/if}
     {/if}
   </section>
 
-  {#if summary}
+  {#if summary && !editing}
     <section class="card">
-      <h2>점검 실행</h2>
-      <label class="check"><input type="checkbox" bind:checked={safe} /> 운영 안전 모드 (초당 2요청·동시 1·호스트당 60요청·passive 전용)</label>
-      <label>점검 항목 제한 (선택, 쉼표 구분: 태그 또는 ID 접두사 — 예: <code>headers,tls,weblogic</code>)
-        <input bind:value={only} placeholder="비우면 전체" />
+      <h2>보안 점검 실행</h2>
+      <h3>1. 점검 항목 선택</h3>
+      <CheckPicker bind:only bind:count={selectedCount} />
+
+      <h3>2. 실행 옵션</h3>
+      <label class="check">
+        <input type="checkbox" bind:checked={safe} disabled={summary.safe_mode} />
+        운영 안전 모드 (초당 2요청·동시 1·호스트당 60요청·경로 탐색 최소화)
+        {#if summary.safe_mode}<span class="muted">— 대상 정보에서 켜져 있음</span>{/if}
       </label>
       {#each summary.auth_envs as env}
         <label>테스트 계정 비밀번호 <code>{env}</code> (저장되지 않음 · 비우면 서버 환경변수 사용)
           <input type="password" autocomplete="off" bind:value={passwords[env]} />
         </label>
       {/each}
+
+      <h3>3. 확인 후 실행</h3>
       <div class="row">
-        <button onclick={dryRun}>실행 계획 확인 (요청 없음)</button>
+        <button onclick={dryRun} disabled={selectedCount === 0}>실행 계획 확인 (요청 없음)</button>
+        {#if selectedCount === 0}<span class="error">점검 항목을 하나 이상 선택하십시오.</span>{/if}
       </div>
       {#if plan}
         <div class="plan">
@@ -146,12 +171,12 @@
           </p>
           {#if plan.window_error}<p class="muted">{plan.window_error}</p>{/if}
           <ul>
-            {#each Object.entries(plan.targets) as [t, ids]}<li><code>{t}</code>: {ids.join(', ') || '없음'}</li>{/each}
+            {#each Object.entries(plan.targets) as [t, ids]}<li><code>{t}</code>: {ids.join(', ') || '실행할 점검 없음'}</li>{/each}
           </ul>
           {#if plan.skipped.length}<p class="muted">제외: {plan.skipped.join(', ')}</p>{/if}
         </div>
         <label class="check"><input type="checkbox" bind:checked={confirmed} /> 승인된 대상·시간대임을 확인했습니다</label>
-        <button class="primary" disabled={!confirmed || !plan.in_window || busy} onclick={start}>점검 시작</button>
+        <button class="primary" disabled={!confirmed || !plan.in_window || busy || plan.jobs === 0} onclick={start}>점검 시작</button>
       {/if}
       {#if runError}<p class="error">{runError}</p>{/if}
     </section>
