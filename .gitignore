@@ -1,0 +1,20 @@
+# 점검 설정·결과 (사내 정보 포함 가능)
+scope.yaml
+*.local.yaml
+.env
+results/
+*.db
+
+# 빌드 산출물
+bin/
+dist/
+web/dist/
+web/node_modules/
+
+# 기타
+*.exe
+coverage.out
+.idea/
+.vscode/
+.DS_Store
+.claude/settings.local.json

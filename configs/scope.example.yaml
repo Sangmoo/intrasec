@@ -1,0 +1,43 @@
+# intrasec 점검 범위 설정 예시
+# 복사해서 scope.yaml 로 사용하십시오 (scope.yaml 은 .gitignore 대상).
+# 승인되지 않은 시스템은 절대 대상에 넣지 마십시오.
+
+engagement:
+  name: "2026 사내시스템 정기점검"
+  approved_by: "정보보안 담당자"
+  approval_ref: "결재문서번호 또는 메일 제목"
+  window:                                   # 이 시간대 밖에서는 엔진이 시작을 거부합니다
+    start: "2026-11-10T19:00:00+09:00"
+    end:   "2026-11-10T23:00:00+09:00"
+
+targets:
+  - name: ERP
+    base_url: https://erp.example.local
+    ports: [443, 7001]
+    tags: [weblogic, xplatform]
+  - name: 그룹웨어
+    base_url: https://gw.example.local
+    tags: [groupware]
+
+allow:
+  cidrs: [10.0.10.0/28]                     # DNS 해석 후 실제 IP 가 이 대역 안이어야 요청이 나갑니다
+
+exclude_paths:                              # 기본 제외(logout, delete 등)에 추가됩니다
+  - /logout
+  - /*/delete*
+  - /approval/submit*
+
+auth:
+  - target: ERP
+    type: form
+    login_url: https://erp.example.local/login.do
+    username_field: userId
+    password_field: userPw
+    username: scan_test01
+    password_env: INTRASEC_ERP_PW           # 비밀번호는 환경변수로 (password: 필드는 거부됨)
+
+options:
+  rate_limit: 5                             # 초당 요청 수
+  concurrency: 4
+  active_checks: false                      # true 일 때만 active 레벨 점검 실행
+  timeout_sec: 15

@@ -1,0 +1,5 @@
+title = "intrasec gitleaks config"
+
+# 기본 규칙 사용. testdata/ 도 검사 대상이므로 녹화 응답의 세션 값은 반드시 마스킹할 것.
+[extend]
+useDefault = true

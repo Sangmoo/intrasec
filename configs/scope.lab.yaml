@@ -1,0 +1,23 @@
+# 로컬 실습용 (make run-lab 으로 띄운 OWASP Juice Shop / DVWA)
+engagement:
+  name: "로컬 실습 환경"
+  approved_by: "개발자 본인 (로컬 컨테이너)"
+  approval_ref: "deploy/docker-compose.yml"
+  window:
+    start: "2026-01-01T00:00:00+09:00"
+    end:   "2027-12-31T23:59:59+09:00"
+
+targets:
+  - name: juice-shop
+    base_url: http://localhost:3000
+  - name: dvwa
+    base_url: http://localhost:8081
+
+allow:
+  cidrs: [127.0.0.1/32, "::1/128"]
+
+options:
+  rate_limit: 5
+  concurrency: 2
+  active_checks: false
+  timeout_sec: 10

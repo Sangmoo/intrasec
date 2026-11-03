@@ -1,0 +1,13 @@
+# 테스트용 취약 앱. 127.0.0.1 에만 바인딩합니다 (외부 노출 금지).
+services:
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+
+  dvwa:
+    image: vulnerables/web-dvwa:latest
+    ports:
+      - "127.0.0.1:8081:80"
+    restart: unless-stopped

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>보안 점검 결과 - {{.R.Engagement}}</title>
+<style>
+  :root { --fg:#1f2328; --muted:#59636e; --line:#d1d9e0; --bg:#fff; --soft:#f6f8fa;
+          --critical:#8b0000; --high:#d1242f; --medium:#bc4c00; --low:#9a6700; --info:#0969da; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.6 "Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 32px 16px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 18px; border-bottom: 1px solid var(--line); padding-bottom: 4px; margin-top: 32px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); width: 140px; font-weight: 600; }
+  .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .summary div { border: 1px solid var(--line); border-radius: 6px; padding: 8px; text-align: center; }
+  .summary b { display: block; font-size: 22px; }
+  .sev { display:inline-block; color:#fff; border-radius:4px; padding:0 6px; font-size:12px; font-weight:700; }
+  .sev-critical { background: var(--critical); } .sev-high { background: var(--high); }
+  .sev-medium { background: var(--medium); } .sev-low { background: var(--low); } .sev-info { background: var(--info); }
+  .finding { border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; margin: 12px 0; break-inside: avoid; }
+  .finding h3 { margin: 0 0 6px; font-size: 15px; }
+  .meta { color: var(--muted); font-size: 12px; word-break: break-all; }
+  pre { background: var(--soft); padding: 8px; overflow-x: auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+  .notice { color: var(--muted); font-size: 12px; margin-top: 40px; }
+  @media print {
+    main { max-width: none; padding: 0; }
+    details { display: block; } details > summary { display: none; }
+    .finding { page-break-inside: avoid; }
+  }
+  @media (max-width: 600px) { .summary { grid-template-columns: repeat(3, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+  <h1>보안 점검 결과</h1>
+  <div class="meta">{{.R.Engagement}} · 점검 ID {{.R.ScanID}}</div>
+
+  <h2>점검 개요</h2>
+  <table>
+    <tr><th>승인자</th><td>{{.R.ApprovedBy}}</td></tr>
+    <tr><th>승인 근거</th><td>{{.R.ApprovalRef}}</td></tr>
+    <tr><th>점검 시각</th><td>{{dt .R.StartedAt}} ~ {{dt .R.FinishedAt}}</td></tr>
+    <tr><th>대상</th><td>{{join .R.Targets ", "}}</td></tr>
+    <tr><th>점검 항목</th><td>{{join .R.Checks ", "}}</td></tr>
+    {{- if .R.Skipped}}<tr><th>제외된 항목</th><td>{{join .R.Skipped ", "}}</td></tr>{{end}}
+  </table>
+
+  <h2>요약</h2>
+  <div class="summary">
+    {{- range .Summary}}
+    <div><span class="sev sev-{{.Severity}}">{{upper .Severity}}</span><b>{{.Count}}</b></div>
+    {{- end}}
+  </div>
+
+  <h2>발견 항목</h2>
+  {{- if not .R.Findings}}<p>발견된 항목이 없습니다.</p>{{end}}
+  {{- range .R.Findings}}
+  <section class="finding">
+    <h3><span class="sev sev-{{.Severity}}">{{upper .Severity}}</span> {{.CheckID}} — {{.Title}}</h3>
+    <div class="meta">{{.Target}}{{if .CWE}} · {{join .CWE ", "}}{{end}}{{if .OWASP}} · {{join .OWASP ", "}}{{end}}{{if .KISA}} · KISA {{join .KISA ", "}}{{end}}</div>
+    <p>{{.Description}}</p>
+    <p><b>조치 방법</b>: {{.Remediation}}</p>
+    {{- if .Evidence.Note}}<p class="meta">{{.Evidence.Note}}</p>{{end}}
+    {{- if .Evidence.Response}}
+    <details><summary>근거 요청/응답</summary>
+      <pre>{{.Evidence.Request}}</pre>
+      <pre>{{.Evidence.Response}}</pre>
+    </details>
+    {{- end}}
+  </section>
+  {{- end}}
+
+  {{- if .R.Errors}}
+  <h2>실행 오류</h2>
+  <ul>{{range .R.Errors}}<li>{{.}}</li>{{end}}</ul>
+  {{- end}}
+
+  <p class="notice">본 리포트는 승인된 점검 범위 내에서 생성되었으며, 쿠키·세션·인증 값은 마스킹되었습니다. 외부 유출에 유의하십시오.</p>
+</main>
+</body>
+</html>

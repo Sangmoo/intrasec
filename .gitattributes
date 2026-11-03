@@ -1,0 +1,3 @@
+* text=auto eol=lf
+*.http -text
+*.bat text eol=crlf

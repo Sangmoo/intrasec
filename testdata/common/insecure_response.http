@@ -1,0 +1,10 @@
+HTTP/1.1 200 OK
+Date: Tue, 10 Nov 2026 10:00:00 GMT
+Server: Apache/2.4.6 (CentOS)
+X-Powered-By: Servlet/2.5 JSP/2.1
+Content-Type: text/html; charset=UTF-8
+Set-Cookie: JSESSIONID=REDACTED0000000000000000; path=/
+Set-Cookie: lang=ko; path=/
+Content-Length: 13
+
+<html></html>

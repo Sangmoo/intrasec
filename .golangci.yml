@@ -1,0 +1,23 @@
+version: "2"
+
+linters:
+  enable:
+    - gosec
+    - bodyclose
+    - errorlint
+    - misspell
+    - unconvert
+  settings:
+    gosec:
+      excludes:
+        - G402 # TLS InsecureSkipVerify / MinVersion: 점검 도구 특성상 transport 에서 의도적으로 사용
+        - G204 # serve 의 브라우저 실행
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [gosec, bodyclose]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
