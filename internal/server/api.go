@@ -361,7 +361,8 @@ func (s *Server) startScan(w http.ResponseWriter, r *http.Request) {
 		fail(http.StatusInternalServerError, err.Error())
 		return
 	}
-	go s.execute(ctx, rn, engine.Options{ //nolint:gosec // 점검은 요청이 끝난 뒤에도 계속되어야 하며 취소는 rn.cancel 로 한다Scope: sc, HTTP: client, Checks: selected, Audit: s.cfg.Audit, Auth: auths, ScanID: id})
+	// 점검은 요청이 끝난 뒤에도 계속되어야 하며 취소는 rn.cancel 로 한다.
+	go s.execute(ctx, rn, engine.Options{Scope: sc, HTTP: client, Checks: selected, Audit: s.cfg.Audit, Auth: auths, ScanID: id}) //nolint:gosec // G118: 의도적
 	writeJSON(w, http.StatusAccepted, map[string]any{"scan_id": id, "plan": viewPlan(plan)})
 }
 
