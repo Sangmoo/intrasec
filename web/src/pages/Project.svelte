@@ -132,7 +132,7 @@
       {#if rawEdit || !config}
         <textarea rows="22" spellcheck="false" bind:value={rawYaml}></textarea>
       {:else}
-        <ScopeForm {config} bind:yaml={formYaml} />
+        <ScopeForm {config} bind:yaml={formYaml} fallbackName={project.name} />
       {/if}
       <button class="primary" onclick={saveScope}>저장</button>
       {#if editErrors.length}<ul class="error">{#each editErrors as e}<li>{e}</li>{/each}</ul>{/if}

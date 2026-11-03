@@ -2,7 +2,8 @@
   // 점검 범위 입력 양식. 입력값으로 scope.yaml 을 만들어 yaml 에 바인딩한다.
   import { api } from './api.js'
 
-  let { config = null, yaml = $bindable('') } = $props()
+  // fallbackName: 점검명을 비워 두면 대신 쓸 이름 (보통 프로젝트 이름)
+  let { config = null, yaml = $bindable(''), fallbackName = '' } = $props()
 
   const TYPES = [
     { tag: 'weblogic', label: 'WebLogic' },
@@ -88,7 +89,7 @@
   function toYAML(f) {
     const out = []
     out.push('engagement:')
-    out.push(`  name: ${q(f.name)}`)
+    out.push(`  name: ${q(f.name.trim() || fallbackName.trim())}`)
     out.push(`  approved_by: ${q(f.approved_by)}`)
     out.push(`  approval_ref: ${q(f.approval_ref)}`)
     out.push('  window:')
@@ -171,7 +172,7 @@
 <fieldset>
   <legend>1. 승인 정보</legend>
   <div class="grid2">
-    <label>점검명 <input bind:value={f.name} placeholder="예: 2026 하반기 ERP 정기점검" /></label>
+    <label>점검명 (비우면 프로젝트 이름) <input bind:value={f.name} placeholder="예: 2026 하반기 ERP 정기점검" /></label>
     <label>승인자 <span class="req">*</span><input bind:value={f.approved_by} placeholder="예: 정보보안팀 홍길동" /></label>
     <label>승인 근거 <span class="req">*</span><input bind:value={f.approval_ref} placeholder="결재문서번호 또는 승인 메일 제목" /></label>
     <span></span>

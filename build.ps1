@@ -10,11 +10,26 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
+# 설치 직후에는 이미 열려 있던 콘솔의 PATH 에 Go/Node 가 없다. 레지스트리의 최신 PATH 를 다시 읽고,
+# 그래도 없으면 기본 설치 경로를 찾아 이 세션에만 추가한다.
+if (-not (Get-Command go -ErrorAction SilentlyContinue) -or -not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+}
+$fallback = @{
+    go  = @("$env:ProgramFiles\Go\bin", "$env:USERPROFILE\sdk\go\bin")
+    npm = @("$env:ProgramFiles\nodejs")
+}
 foreach ($tool in 'go', 'npm') {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
-        throw "$tool 이(가) 설치되어 있지 않습니다. README 의 '개발 환경 준비'를 참고하십시오."
+        $dir = $fallback[$tool] | Where-Object { Test-Path (Join-Path $_ "$tool*") } | Select-Object -First 1
+        if ($dir) { $env:Path = "$dir;$env:Path" }
+    }
+    if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
+        $hint = @{ go = 'https://go.dev/dl/'; npm = 'https://nodejs.org/ (LTS)' }[$tool]
+        throw "$tool 을(를) 찾을 수 없습니다. 설치($hint) 후 PowerShell 창을 새로 열고 다시 실행하십시오."
     }
 }
+Write-Host ("go: " + (go version)) -ForegroundColor DarkGray
 
 Write-Host '[1/2] 웹 UI 빌드 (web\dist)' -ForegroundColor Cyan
 Push-Location web

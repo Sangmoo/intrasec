@@ -76,7 +76,7 @@
   {#if rawMode}
     <label>scope.yaml <textarea rows="24" spellcheck="false" bind:value={rawYaml}></textarea></label>
   {:else}
-    <ScopeForm bind:yaml={formYaml} />
+    <ScopeForm bind:yaml={formYaml} fallbackName={name} />
     <details>
       <summary>생성된 scope.yaml 보기</summary>
       <pre>{formYaml}</pre>
