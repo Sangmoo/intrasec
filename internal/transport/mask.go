@@ -78,6 +78,9 @@ func DumpResponse(resp *http.Response, body []byte, maxBody int) string {
 
 // ReadBody 는 최대 limit 바이트까지 본문을 읽고 닫는다.
 func ReadBody(resp *http.Response, limit int64) ([]byte, error) {
-	defer resp.Body.Close()
-	return io.ReadAll(io.LimitReader(resp.Body, limit))
+	b, err := io.ReadAll(io.LimitReader(resp.Body, limit))
+	if cerr := resp.Body.Close(); err == nil {
+		err = cerr
+	}
+	return b, err
 }

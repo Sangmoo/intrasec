@@ -41,7 +41,7 @@ var (
 	envSecretKey = regexp.MustCompile(`(?i)(PASS|SECRET|KEY|TOKEN|DB_|DATABASE|AWS_|MAIL_|REDIS_|JWT)`)
 	sqlDump      = regexp.MustCompile(`(?i)(-- MySQL dump|-- PostgreSQL database dump|CREATE TABLE\s|INSERT INTO\s)`)
 	phpSource    = regexp.MustCompile(`<\?php`)
-	dirListing   = regexp.MustCompile(`(?i)(<title>Index of /|<h1>Index of /|Directory Listing For /|\[To Parent Directory\]|<title>Directory listing for /)`)
+	dirListing   = regexp.MustCompile(`(?i)(<title>Index of /|<h1>Index of /|Directory Listing For /|\[To Parent Directory\]|<title>Directory listing for /|<title>listing directory /)`)
 )
 
 var exposures = []exposure{
@@ -129,7 +129,7 @@ var exposures = []exposure{
 		id: "COMMON-EXP-003", title: "디렉터리 리스팅 활성화", sev: finding.SevMedium, cwe: "CWE-548", kisa: "DI",
 		desc:  "디렉터리 인덱싱이 활성화되어 업로드 파일, 백업 파일 등 의도하지 않은 파일 목록이 노출됩니다.",
 		fix:   "웹 서버에서 디렉터리 인덱싱을 비활성화하십시오 (Apache: Options -Indexes, nginx: autoindex off, IIS: 디렉터리 검색 사용 안 함).",
-		paths: []string{"/", "/upload/", "/uploads/", "/files/", "/file/", "/data/", "/backup/", "/images/", "/tmp/", "/temp/", "/logs/"},
+		paths: []string{"/", "/upload/", "/uploads/", "/files/", "/file/", "/data/", "/backup/", "/images/", "/tmp/", "/temp/", "/logs/", "/ftp/"},
 		match: func(p *checks.Page) (string, bool) {
 			if m := dirListing.Find(p.Body); m != nil {
 				return "디렉터리 목록 표식: " + string(m), true

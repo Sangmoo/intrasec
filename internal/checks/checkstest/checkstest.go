@@ -2,7 +2,10 @@
 package checkstest
 
 import (
+	"crypto/tls"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -18,6 +21,25 @@ func Serve(t *testing.T, h http.Handler, tags ...string) (checks.Target, *checks
 	t.Helper()
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
+	return session(t, srv, tags)
+}
+
+// ServeTLS 는 cfg(nil 이면 httptest 기본값)로 HTTPS 서버를 띄운다.
+// httptest 의 인증서는 127.0.0.1 용 자체 서명 인증서다.
+func ServeTLS(t *testing.T, h http.Handler, cfg *tls.Config, tags ...string) (checks.Target, *checks.Session) {
+	t.Helper()
+	srv := httptest.NewUnstartedServer(h)
+	if cfg != nil {
+		srv.TLS = cfg
+	}
+	srv.Config.ErrorLog = log.New(io.Discard, "", 0) // 점검의 의도적 핸드셰이크 실패 로그 숨김
+	srv.StartTLS()
+	t.Cleanup(srv.Close)
+	return session(t, srv, tags)
+}
+
+func session(t *testing.T, srv *httptest.Server, tags []string) (checks.Target, *checks.Session) {
+	t.Helper()
 	y := fmt.Sprintf(`
 engagement: {name: t, approved_by: a, approval_ref: r, window: {start: "2000-01-01T00:00:00Z", end: "2100-01-01T00:00:00Z"}}
 targets: [{name: lab, base_url: %q}]

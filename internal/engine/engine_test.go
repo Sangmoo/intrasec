@@ -35,7 +35,7 @@ func (f *fakeCheck) Run(ctx context.Context, t checks.Target, s *checks.Session)
 	if err != nil {
 		return nil, err
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return []finding.Finding{{CheckID: f.id, Title: "t", Severity: finding.SevLow, Target: t.BaseURL.String()}}, nil
 }
 

@@ -48,6 +48,7 @@ cp configs/scope.example.yaml scope.yaml   # 대상·승인 정보 작성
 ```bash
 make run-lab
 ./bin/intrasec scan -c configs/scope.lab.yaml -o report.html
+make test-integration     # Juice Shop 대상 통합 테스트
 ```
 
 ## 구조
@@ -68,7 +69,7 @@ pkg/finding/           Finding 모델
 
 ## 로드맵
 
-- **M1** 엔진 기반 (CLI): scope, transport, engine, common 점검, JSON/Markdown 리포트 — 진행 중
+- **M1** 엔진 기반 (CLI): scope, transport, engine, common 점검(헤더·TLS·쿠키·노출 파일·에러), PHP 점검, 리포트, Juice Shop 통합 테스트 — v0.1.0 릴리스 대기
 - **M2** 사내 시스템 특화 + 인증: auth, weblogic, xplatform, HTML 리포트
 - **M3** 웹 UI: server, store(SQLite), Svelte UI, GoReleaser
 - **M4** 확장: Nuclei, groupware, SARIF, KISA 매핑, diff 리포트

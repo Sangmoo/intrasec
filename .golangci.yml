@@ -1,5 +1,9 @@
 version: "2"
 
+run:
+  build-tags:
+    - integration
+
 linters:
   enable:
     - gosec
@@ -8,10 +12,17 @@ linters:
     - misspell
     - unconvert
   settings:
+    errcheck:
+      # CLI 출력용 fmt.Fprint* 는 쓰기 실패를 처리할 방법이 없다.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
     gosec:
       excludes:
         - G402 # TLS InsecureSkipVerify / MinVersion: 점검 도구 특성상 transport 에서 의도적으로 사용
         - G204 # serve 의 브라우저 실행
+        - G304 # 사용자가 CLI 인자로 지정한 설정·리포트 파일 경로
   exclusions:
     rules:
       - path: _test\.go

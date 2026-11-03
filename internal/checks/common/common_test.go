@@ -17,7 +17,7 @@ func loadResponse(t *testing.T, name string) *http.Response {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { f.Close() })
+	t.Cleanup(func() { _ = f.Close() })
 	resp, err := http.ReadResponse(bufio.NewReader(f), nil)
 	if err != nil {
 		t.Fatal(err)

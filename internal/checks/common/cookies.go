@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/Sangmoo/intrasec/internal/checks"
-	"github.com/Sangmoo/intrasec/internal/transport"
 	"github.com/Sangmoo/intrasec/pkg/finding"
 )
 
@@ -23,20 +22,12 @@ func (cookiesCheck) Level() checks.Level { return checks.Passive }
 func (cookiesCheck) Tags() []string      { return []string{checks.TagCommon, "cookies"} }
 
 func (cookiesCheck) Run(ctx context.Context, t checks.Target, s *checks.Session) ([]finding.Finding, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, t.BaseURL.String(), nil)
+	p, err := checks.Fetch(ctx, s, t.BaseURL.String())
 	if err != nil {
 		return nil, err
 	}
-	resp, err := s.HTTP.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	_, _ = transport.ReadBody(resp, 64<<10)
-	ev := finding.Evidence{
-		Request:  transport.DumpRequest(req),
-		Response: transport.DumpResponse(resp, nil, 0),
-	}
-	return analyzeCookies(resp.Request.URL.String(), resp.Request.URL.Scheme == "https", resp.Cookies(), ev), nil
+	cookies := (&http.Response{Header: p.Header}).Cookies()
+	return analyzeCookies(p.URL, strings.HasPrefix(p.URL, "https://"), cookies, p.Evidence), nil
 }
 
 // sessionCookieHints 는 세션 쿠키로 간주할 이름 조각이다.

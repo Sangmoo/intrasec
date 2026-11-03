@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/Sangmoo/intrasec/internal/checks"
-	"github.com/Sangmoo/intrasec/internal/transport"
 	"github.com/Sangmoo/intrasec/pkg/finding"
 )
 
@@ -25,20 +24,11 @@ func (headersCheck) Level() checks.Level { return checks.Passive }
 func (headersCheck) Tags() []string      { return []string{checks.TagCommon, "headers"} }
 
 func (headersCheck) Run(ctx context.Context, t checks.Target, s *checks.Session) ([]finding.Finding, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, t.BaseURL.String(), nil)
+	p, err := checks.Fetch(ctx, s, t.BaseURL.String())
 	if err != nil {
 		return nil, err
 	}
-	resp, err := s.HTTP.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	_, _ = transport.ReadBody(resp, 64<<10)
-	ev := finding.Evidence{
-		Request:  transport.DumpRequest(req),
-		Response: transport.DumpResponse(resp, nil, 0),
-	}
-	return analyzeHeaders(resp.Request.URL.String(), resp.Request.URL.Scheme == "https", resp.Header, ev), nil
+	return analyzeHeaders(p.URL, strings.HasPrefix(p.URL, "https://"), p.Header, p.Evidence), nil
 }
 
 var versionLike = regexp.MustCompile(`\d+(\.\d+)+`)

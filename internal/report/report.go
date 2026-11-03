@@ -70,7 +70,7 @@ func WriteFile(path string, f Format, r *engine.Result) error {
 		return err
 	}
 	if err := Write(out, f, r); err != nil {
-		out.Close()
+		_ = out.Close()
 		return err
 	}
 	return out.Close()

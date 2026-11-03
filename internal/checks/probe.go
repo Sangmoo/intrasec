@@ -35,7 +35,7 @@ func Fetch(ctx context.Context, s *Session, rawURL string) (*Page, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := s.HTTP.Do(req)
+	resp, err := s.HTTP.Do(req) //nolint:bodyclose // transport.ReadBody 가 닫는다
 	if err != nil {
 		return nil, err
 	}

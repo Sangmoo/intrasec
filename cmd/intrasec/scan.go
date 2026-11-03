@@ -48,7 +48,7 @@ func newScanCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("감사 로그 열기 실패: %w", err)
 			}
-			defer al.Close()
+			defer func() { _ = al.Close() }()
 
 			selected := checks.Select(only)
 			if len(selected) == 0 {

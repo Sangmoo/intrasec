@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const tokenHeader = "X-Intrasec-Token"
+const tokenHeader = "X-Intrasec-Token" //nolint:gosec // 헤더 이름이지 비밀값이 아님
 
 type Server struct {
 	Token   string

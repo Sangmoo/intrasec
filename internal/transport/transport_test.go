@@ -59,7 +59,7 @@ func TestRedirectOutOfScopeBlocked(t *testing.T) {
 	if err != nil {
 		t.Fatalf("스코프 내 리다이렉트는 허용: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	_, err = c.Get(context.Background(), srv.URL+"/out")
 	if !errors.Is(err, scope.ErrHost) {
@@ -90,7 +90,7 @@ func TestAutoPauseOn5xx(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 	if _, err := c.Get(context.Background(), srv.URL+"/"); !errors.Is(err, ErrPaused) {
 		t.Fatalf("일시정지 기대: %v", err)
@@ -100,7 +100,7 @@ func TestAutoPauseOn5xx(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Resume 후 재개 기대: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestMasking(t *testing.T) {

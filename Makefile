@@ -7,7 +7,7 @@ LDFLAGS := -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.dat
 
 export CGO_ENABLED := 0
 
-.PHONY: all deps test test-race lint vuln secrets web build run-lab stop-lab clean
+.PHONY: all deps test test-integration test-race lint vuln secrets web build run-lab stop-lab clean
 
 all: lint test build
 
@@ -17,6 +17,9 @@ deps:
 
 test:
 	go test -count=1 ./...
+
+test-integration:
+	go test -tags integration -count=1 -v ./internal/integration/
 
 test-race:
 	CGO_ENABLED=1 go test -race -count=1 ./...
