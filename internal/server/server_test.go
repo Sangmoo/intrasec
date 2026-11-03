@@ -43,14 +43,14 @@ func TestSecurityMiddleware(t *testing.T) {
 		origin string
 		want   int
 	}{
-		{"정상", http.MethodGet, "127.0.0.1:8080", s.Token, "", http.StatusOK},
-		{"localhost 허용", http.MethodGet, "localhost:8080", s.Token, "", http.StatusOK},
-		{"리바인딩 Host 거부", http.MethodGet, "evil.example.com:8080", s.Token, "", http.StatusForbidden},
-		{"토큰 없음", http.MethodGet, "127.0.0.1:8080", "", "", http.StatusUnauthorized},
-		{"토큰 불일치", http.MethodGet, "127.0.0.1:8080", "bad", "", http.StatusUnauthorized},
-		{"POST Origin 없음", http.MethodPost, "127.0.0.1:8080", s.Token, "", http.StatusForbidden},
-		{"POST 외부 Origin", http.MethodPost, "127.0.0.1:8080", s.Token, "http://evil.example.com", http.StatusForbidden},
-		{"DELETE 거부", http.MethodDelete, "127.0.0.1:8080", s.Token, "http://127.0.0.1:8080", http.StatusMethodNotAllowed},
+		{"정상", http.MethodGet, "127.0.0.1:7777", s.Token, "", http.StatusOK},
+		{"localhost 허용", http.MethodGet, "localhost:7777", s.Token, "", http.StatusOK},
+		{"리바인딩 Host 거부", http.MethodGet, "evil.example.com:7777", s.Token, "", http.StatusForbidden},
+		{"토큰 없음", http.MethodGet, "127.0.0.1:7777", "", "", http.StatusUnauthorized},
+		{"토큰 불일치", http.MethodGet, "127.0.0.1:7777", "bad", "", http.StatusUnauthorized},
+		{"POST Origin 없음", http.MethodPost, "127.0.0.1:7777", s.Token, "", http.StatusForbidden},
+		{"POST 외부 Origin", http.MethodPost, "127.0.0.1:7777", s.Token, "http://evil.example.com", http.StatusForbidden},
+		{"DELETE 거부", http.MethodDelete, "127.0.0.1:7777", s.Token, "http://127.0.0.1:7777", http.StatusMethodNotAllowed},
 	}
 	for _, c := range cases {
 		req := httptest.NewRequest(c.method, "/api/health", nil)

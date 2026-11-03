@@ -23,6 +23,9 @@ import (
 
 const tokenHeader = "X-Intrasec-Token" //nolint:gosec // 헤더 이름이지 비밀값이 아님
 
+// DefaultPort 는 serve 의 기본 포트다. 8080 은 사내 WAS·ERP 개발 서버와 자주 겹쳐 피한다.
+const DefaultPort = 7777
+
 type Config struct {
 	Version string
 	Store   *store.Store

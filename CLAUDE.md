@@ -243,7 +243,7 @@ options:
 ## 7. CLI
 
 ```bash
-intrasec serve [--port 8080] [--no-browser]
+intrasec serve [--port 7777] [--no-browser]
 intrasec scan -c scope.yaml [--only weblogic,headers] [-o report.html]
 intrasec report --scan-id <id> --format html|json|md|sarif -o out.html
 intrasec checks list

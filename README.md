@@ -67,13 +67,32 @@ make test-integration     # Juice Shop 대상 통합 테스트
 ## 웹 UI
 
 ```bash
-./bin/intrasec serve            # 브라우저가 http://127.0.0.1:8080/#token=... 으로 열림
+./bin/intrasec serve                 # 브라우저가 http://127.0.0.1:7777/#token=... 으로 열림
+./bin/intrasec serve --port 9000     # 7777 이 사용 중이면 다른 포트
 ```
+
+기본 포트는 **7777** 입니다 (8080 은 WAS·ERP 개발 서버와 자주 겹침). 포트가 이미 사용 중이면 브라우저를 열지 않고 오류로 알려줍니다.
+
+### Windows PC 에서 사용하기
+
+1. [Releases](https://github.com/Sangmoo/intrasec/releases) 에서 `intrasec_<버전>_windows_amd64.zip` 을 받아 원하는 폴더(예: `C:\intrasec`)에 압축을 풉니다. 설치는 필요 없습니다.
+2. 그 폴더에서 PowerShell 을 열고 실행합니다.
+   ```powershell
+   cd C:\intrasec
+   .\intrasec.exe serve
+   ```
+3. 기본 브라우저가 `http://127.0.0.1:7777/#token=...` 으로 자동으로 열립니다. 열리지 않으면 터미널에 출력된 주소(토큰 포함)를 그대로 복사해 브라우저에 붙여넣습니다. 토큰 없이 `http://127.0.0.1:7777` 만 열면 "인증 토큰 없음" 이 표시됩니다.
+4. 사용을 마치면 터미널에서 `Ctrl+C` 로 종료합니다. 다시 실행하면 토큰이 새로 발급됩니다.
+
+- 결과 DB·감사 로그는 실행한 폴더의 `results\` 아래에 생깁니다. 항상 같은 폴더에서 실행하십시오.
+- 로그인 점검용 비밀번호는 화면에서 입력하거나, 실행 전에 환경변수로 지정합니다: `$env:INTRASEC_ERP_PW = "..."` (PowerShell, 해당 창에서만 유효).
+- 처음 실행 시 Windows SmartScreen 경고가 뜰 수 있습니다 (서명되지 않은 실행 파일). 내려받은 파일의 SHA-256 을 릴리스의 `checksums.txt` 와 비교한 뒤 실행하십시오: `Get-FileHash .\intrasec_<버전>_windows_amd64.zip`
+- 웹 UI 는 `127.0.0.1` 에만 열리므로 같은 PC 에서만 접속할 수 있습니다 (다른 PC·휴대폰에서 접속 불가, 의도된 설계).
 
 - 프로젝트(scope) 등록·검증 → 실행 계획 확인(요청 없음) → "승인된 대상·시간대 확인" 체크 후 점검 시작 → 실시간 진행(SSE) → 발견 항목·리포트 다운로드(HTML/MD/JSON/SARIF) → 점검 간 비교
 - 결과는 `results/intrasec.db`(SQLite), 감사 로그는 `results/audit.log` 에 저장됩니다. 테스트 계정 비밀번호는 화면에서 입력해도 저장되지 않습니다.
 - 보안: `127.0.0.1` 전용, 실행마다 새 토큰(URL 프래그먼트로만 전달), Host·Origin 검증, 상태 변경은 POST 만, CSP `default-src 'self'`.
-- UI 개발: `intrasec serve --no-browser` 실행 후 `cd web && npm run dev` (API 는 8080 으로 프록시).
+- UI 개발: `intrasec serve --no-browser` 실행 후 `cd web && npm run dev` (API 는 7777 로 프록시).
 
 ## 구조
 
