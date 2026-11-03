@@ -55,3 +55,14 @@ func TestSARIFValid(t *testing.T) {
 		t.Fatalf("SARIF 형식 오류: %v", err)
 	}
 }
+
+func TestDiffResults(t *testing.T) {
+	f := func(id string) finding.Finding { return finding.Finding{ID: id, CheckID: id, Severity: finding.SevLow} }
+	d := DiffResults(
+		&engine.Result{ScanID: "a", Findings: []finding.Finding{f("x"), f("y")}},
+		&engine.Result{ScanID: "b", Findings: []finding.Finding{f("y"), f("z")}},
+	)
+	if len(d.New) != 1 || d.New[0].ID != "z" || len(d.Resolved) != 1 || d.Resolved[0].ID != "x" || len(d.Unchanged) != 1 {
+		t.Fatalf("diff 이상: %+v", d)
+	}
+}

@@ -13,7 +13,7 @@ all: lint test build
 
 deps:
 	go mod download
-	@if [ -f web/package.json ]; then cd web && npm ci; fi
+	cd web && npm ci --no-fund --no-audit
 
 test:
 	go test -count=1 ./...
@@ -34,7 +34,7 @@ secrets:
 	gitleaks detect --source . --no-banner
 
 web:
-	@if [ -f web/package.json ]; then cd web && npm run build; else echo "web: 프론트엔드 미구현 (M3), 건너뜀"; fi
+	cd web && npm ci --no-fund --no-audit && npm run build
 
 build: web
 	go build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY) ./cmd/intrasec
@@ -46,4 +46,5 @@ stop-lab:
 	docker compose -f deploy/docker-compose.yml down
 
 clean:
-	rm -rf bin dist coverage.out
+	rm -rf bin dist coverage.out web/node_modules
+	find web/dist -mindepth 1 ! -name .gitkeep -delete

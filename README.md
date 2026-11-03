@@ -64,6 +64,17 @@ make run-lab
 make test-integration     # Juice Shop 대상 통합 테스트
 ```
 
+## 웹 UI
+
+```bash
+./bin/intrasec serve            # 브라우저가 http://127.0.0.1:8080/#token=... 으로 열림
+```
+
+- 프로젝트(scope) 등록·검증 → 실행 계획 확인(요청 없음) → "승인된 대상·시간대 확인" 체크 후 점검 시작 → 실시간 진행(SSE) → 발견 항목·리포트 다운로드(HTML/MD/JSON/SARIF) → 점검 간 비교
+- 결과는 `results/intrasec.db`(SQLite), 감사 로그는 `results/audit.log` 에 저장됩니다. 테스트 계정 비밀번호는 화면에서 입력해도 저장되지 않습니다.
+- 보안: `127.0.0.1` 전용, 실행마다 새 토큰(URL 프래그먼트로만 전달), Host·Origin 검증, 상태 변경은 POST 만, CSP `default-src 'self'`.
+- UI 개발: `intrasec serve --no-browser` 실행 후 `cd web && npm run dev` (API 는 8080 으로 프록시).
+
 ## 구조
 
 ```
@@ -75,7 +86,9 @@ internal/checks/       점검 플러그인 (common / php / weblogic / xplatform 
 internal/auth/         폼 로그인, 세션 유지, 만료 감지 후 재로그인
 internal/report/       HTML / JSON / Markdown / SARIF 리포트
 internal/audit/        감사 로그 (JSON Lines)
-internal/server/       로컬 웹 UI API (토큰, Host 검증)
+internal/server/       로컬 웹 UI API (토큰, Host/Origin 검증, SSE, 점검 실행)
+internal/store/        SQLite 저장소 (프로젝트, 점검 결과)
+web/                   Svelte UI (빌드 결과 web/dist 를 go:embed 로 내장)
 pkg/finding/           Finding 모델
 ```
 
@@ -85,7 +98,7 @@ pkg/finding/           Finding 모델
 
 - **M1** 엔진 기반 (CLI): scope, transport, engine, common 점검(헤더·TLS·쿠키·노출 파일·에러), PHP 점검, 리포트, Juice Shop 통합 테스트 — [v0.1.0](https://github.com/Sangmoo/intrasec/releases/tag/v0.1.0)
 - **M2** 사내 시스템 특화 + 인증: auth(폼 로그인·재로그인), weblogic(WLS-001~004), xplatform(XP-001~002), HTML 리포트 — 구현 완료, 사내 스테이징 실전 점검 대기
-- **M3** 웹 UI: server, store(SQLite), Svelte UI, GoReleaser
+- **M3** 웹 UI: server(REST·SSE·토큰), store(SQLite), Svelte UI(go:embed) — 구현 완료, v0.3.0 릴리스 대기
 - **M4** 확장: Nuclei, groupware, SARIF, KISA 매핑, diff 리포트
 
 ## 라이선스

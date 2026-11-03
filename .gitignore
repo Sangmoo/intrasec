@@ -7,8 +7,9 @@ results/
 
 # 빌드 산출물
 bin/
-dist/
-web/dist/
+/dist/
+web/dist/*
+!web/dist/.gitkeep
 web/node_modules/
 
 # 기타

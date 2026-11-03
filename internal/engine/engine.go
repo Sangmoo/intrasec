@@ -28,7 +28,12 @@ type Options struct {
 	// Progress 는 작업 하나가 끝날 때마다 호출된다 (SSE·CLI 진행 표시용). nil 가능.
 	Progress func(Progress)
 	Now      func() time.Time
+	// ScanID 를 지정하면 그 값을 쓴다 (웹 UI 가 실행 전에 ID 를 알아야 할 때). 비우면 자동 생성.
+	ScanID string
 }
+
+// NewScanID 는 시각 기반 점검 ID 를 만든다.
+func NewScanID(t time.Time) string { return newScanID(t) }
 
 // Authenticator 는 internal/auth.Form 이 구현한다.
 type Authenticator interface {
@@ -118,7 +123,7 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 		return nil, err
 	}
 	res := &Result{
-		ScanID:      newScanID(now()),
+		ScanID:      o.ScanID,
 		Engagement:  cfg.Engagement.Name,
 		ApprovedBy:  cfg.Engagement.ApprovedBy,
 		ApprovalRef: cfg.Engagement.ApprovalRef,
@@ -128,6 +133,9 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 		SafeMode:    plan.Options.SafeMode,
 	}
 
+	if res.ScanID == "" {
+		res.ScanID = newScanID(now())
+	}
 	if plan.WindowErr != nil {
 		o.Audit.Log(audit.Event{Action: "scan.denied", ScanID: res.ScanID, Engagement: res.Engagement, Detail: plan.WindowErr.Error()})
 		return nil, plan.WindowErr

@@ -8,24 +8,46 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/Sangmoo/intrasec/internal/audit"
 	"github.com/Sangmoo/intrasec/internal/server"
+	"github.com/Sangmoo/intrasec/internal/store"
+	"github.com/Sangmoo/intrasec/web"
 )
 
 func newServeCmd() *cobra.Command {
 	var (
 		port      int
 		noBrowser bool
+		dbPath    string
+		auditPath string
 	)
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "로컬 웹 UI 실행 (127.0.0.1 전용)",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			s, err := server.New(version)
+			st, err := store.Open(dbPath)
+			if err != nil {
+				return fmt.Errorf("DB 열기 실패: %w", err)
+			}
+			defer func() { _ = st.Close() }()
+			al, err := audit.Open(auditPath)
+			if err != nil {
+				return fmt.Errorf("감사 로그 열기 실패: %w", err)
+			}
+			defer func() { _ = al.Close() }()
+			cfg := server.Config{Version: version, Store: st, Audit: al}
+			if ui, ok := web.Dist(); ok {
+				cfg.UI = ui
+			} else {
+				fmt.Fprintln(cmd.ErrOrStderr(), "주의: 웹 UI 가 빌드되지 않은 바이너리입니다 (make build 필요). API 만 동작합니다.")
+			}
+			s, err := server.New(cfg)
 			if err != nil {
 				return err
 			}
@@ -55,6 +77,8 @@ func newServeCmd() *cobra.Command {
 	}
 	cmd.Flags().IntVar(&port, "port", 8080, "로컬 포트")
 	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "브라우저 자동 실행 안 함")
+	cmd.Flags().StringVar(&dbPath, "db", filepath.Join(resultsDir, "intrasec.db"), "SQLite DB 파일")
+	cmd.Flags().StringVar(&auditPath, "audit-log", filepath.Join(resultsDir, "audit.log"), "감사 로그 파일")
 	return cmd
 }
 

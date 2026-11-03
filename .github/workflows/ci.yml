@@ -16,6 +16,13 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: 웹 UI 빌드 (go:embed 대상)
+        run: cd web && npm ci --no-fund --no-audit && npm run build
       - name: go vet
         run: go vet ./...
       - name: test
