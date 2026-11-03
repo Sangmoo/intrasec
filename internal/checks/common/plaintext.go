@@ -38,7 +38,7 @@ func (plaintextLoginCheck) Run(ctx context.Context, t checks.Target, s *checks.S
 		u.Scheme, u.Host = "http", u.Hostname()
 		urls = append(urls, u.String())
 	}
-	if t.BaseURL.Scheme == "http" {
+	if t.BaseURL.Scheme == "http" && !s.Safe {
 		for _, p := range loginPaths {
 			urls = append(urls, checks.ProbeURLs(t, p)...)
 		}

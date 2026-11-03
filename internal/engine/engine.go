@@ -49,11 +49,52 @@ type Result struct {
 	Findings    []finding.Finding `json:"findings"`
 	Errors      []string          `json:"errors,omitempty"`
 	Canceled    bool              `json:"canceled,omitempty"`
+	SafeMode    bool              `json:"safe_mode,omitempty"`
 }
 
-type job struct {
-	target checks.Target
-	check  checks.Check
+// Job 은 대상 하나에 점검 하나를 실행하는 작업 단위다.
+type Job struct {
+	Target checks.Target
+	Check  checks.Check
+}
+
+// Plan 은 실제 요청 없이 계산한 실행 계획이다 (scan --dry-run 과 Run 이 공유).
+type Plan struct {
+	Options   scope.Options // safe_mode 반영된 실제 적용 옵션
+	Targets   []checks.Target
+	Checks    []checks.Check
+	Skipped   []string
+	Jobs      []Job
+	WindowErr error // 시간대 밖이면 nil 이 아님
+}
+
+// NewPlan 은 점검 레벨·safe_mode·대상 태그를 반영해 실행할 작업을 계산한다.
+func NewPlan(sc *scope.Scope, cs []checks.Check, now time.Time) (*Plan, error) {
+	cfg := sc.Config()
+	p := &Plan{Options: cfg.Options.Effective(), WindowErr: sc.CheckWindow(now)}
+	var err error
+	if p.Targets, err = buildTargets(cfg); err != nil {
+		return nil, err
+	}
+	for _, c := range cs {
+		if c.Level() == checks.Active && !p.Options.ActiveChecks {
+			reason := "active_checks: false"
+			if p.Options.SafeMode {
+				reason = "safe_mode"
+			}
+			p.Skipped = append(p.Skipped, c.ID()+" ("+reason+")")
+			continue
+		}
+		p.Checks = append(p.Checks, c)
+	}
+	for _, t := range p.Targets {
+		for _, c := range p.Checks {
+			if checks.AppliesTo(c, t) {
+				p.Jobs = append(p.Jobs, Job{t, c})
+			}
+		}
+	}
+	return p, nil
 }
 
 // Run 은 점검을 실행한다. 시간대 밖이면 아무 요청도 보내지 않고 거부한다.
@@ -63,6 +104,10 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 		now = o.Now
 	}
 	cfg := o.Scope.Config()
+	plan, err := NewPlan(o.Scope, o.Checks, now())
+	if err != nil {
+		return nil, err
+	}
 	res := &Result{
 		ScanID:      newScanID(now()),
 		Engagement:  cfg.Engagement.Name,
@@ -70,53 +115,35 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 		ApprovalRef: cfg.Engagement.ApprovalRef,
 		StartedAt:   now(),
 		Findings:    []finding.Finding{},
+		Skipped:     plan.Skipped,
+		SafeMode:    plan.Options.SafeMode,
 	}
 
-	if err := o.Scope.CheckWindow(now()); err != nil {
-		o.Audit.Log(audit.Event{Action: "scan.denied", ScanID: res.ScanID, Engagement: res.Engagement, Detail: err.Error()})
-		return nil, err
+	if plan.WindowErr != nil {
+		o.Audit.Log(audit.Event{Action: "scan.denied", ScanID: res.ScanID, Engagement: res.Engagement, Detail: plan.WindowErr.Error()})
+		return nil, plan.WindowErr
 	}
-
-	targets, err := buildTargets(cfg)
-	if err != nil {
-		return nil, err
-	}
-	for _, t := range targets {
+	for _, t := range plan.Targets {
 		res.Targets = append(res.Targets, t.BaseURL.String())
 	}
-
-	var runnable []checks.Check
-	for _, c := range o.Checks {
-		if c.Level() == checks.Active && !cfg.Options.ActiveChecks {
-			res.Skipped = append(res.Skipped, c.ID()+" (active_checks: false)")
-			continue
-		}
-		runnable = append(runnable, c)
+	for _, c := range plan.Checks {
 		res.Checks = append(res.Checks, c.ID())
 	}
-
-	var jobs []job
-	for _, t := range targets {
-		for _, c := range runnable {
-			if checks.AppliesTo(c, t) {
-				jobs = append(jobs, job{t, c})
-			}
-		}
-	}
+	jobs := plan.Jobs
 
 	o.Audit.Log(audit.Event{Action: "scan.start", ScanID: res.ScanID, Engagement: res.Engagement,
-		Detail: fmt.Sprintf("targets=%d checks=%d jobs=%d", len(targets), len(runnable), len(jobs))})
+		Detail: fmt.Sprintf("targets=%d checks=%d jobs=%d safe_mode=%v", len(plan.Targets), len(plan.Checks), len(jobs), plan.Options.SafeMode)})
 
-	sess := &checks.Session{HTTP: o.HTTP}
-	timeout := time.Duration(cfg.Options.TimeoutSec) * time.Second * 4
+	sess := &checks.Session{HTTP: o.HTTP, Safe: plan.Options.SafeMode}
+	timeout := time.Duration(plan.Options.TimeoutSec) * time.Second * 4
 
 	var (
 		mu   sync.Mutex
 		done int
 		wg   sync.WaitGroup
 	)
-	ch := make(chan job)
-	for i := 0; i < cfg.Options.Concurrency; i++ {
+	ch := make(chan Job)
+	for i := 0; i < plan.Options.Concurrency; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -132,9 +159,9 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 				}
 				res.Findings = append(res.Findings, fs...)
 				if err != nil {
-					res.Errors = append(res.Errors, fmt.Sprintf("%s @ %s: %v", j.check.ID(), j.target.Name, err))
+					res.Errors = append(res.Errors, fmt.Sprintf("%s @ %s: %v", j.Check.ID(), j.Target.Name, err))
 				}
-				p := Progress{Done: done, Total: len(jobs), Target: j.target.Name, CheckID: j.check.ID(), Findings: len(fs), Err: err}
+				p := Progress{Done: done, Total: len(jobs), Target: j.Target.Name, CheckID: j.Check.ID(), Findings: len(fs), Err: err}
 				mu.Unlock()
 				if o.Progress != nil {
 					o.Progress(p)
@@ -162,7 +189,7 @@ feed:
 	return res, nil
 }
 
-func runOne(ctx context.Context, j job, s *checks.Session, timeout time.Duration, al *audit.Logger, scanID string) (fs []finding.Finding, err error) {
+func runOne(ctx context.Context, j Job, s *checks.Session, timeout time.Duration, al *audit.Logger, scanID string) (fs []finding.Finding, err error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	defer func() {
@@ -170,8 +197,8 @@ func runOne(ctx context.Context, j job, s *checks.Session, timeout time.Duration
 			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
-	al.Log(audit.Event{Action: "check.run", ScanID: scanID, Target: j.target.BaseURL.String(), CheckID: j.check.ID()})
-	return j.check.Run(ctx, j.target, s)
+	al.Log(audit.Event{Action: "check.run", ScanID: scanID, Target: j.Target.BaseURL.String(), CheckID: j.Check.ID()})
+	return j.Check.Run(ctx, j.Target, s)
 }
 
 func buildTargets(cfg *scope.Config) ([]checks.Target, error) {

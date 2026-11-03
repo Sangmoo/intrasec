@@ -45,6 +45,7 @@
     <tr><th>승인 근거</th><td>{{.R.ApprovalRef}}</td></tr>
     <tr><th>점검 시각</th><td>{{dt .R.StartedAt}} ~ {{dt .R.FinishedAt}}</td></tr>
     <tr><th>대상</th><td>{{join .R.Targets ", "}}</td></tr>
+    {{- if .R.SafeMode}}<tr><th>모드</th><td>운영 안전 모드 (저부하·passive 전용, 경로 탐색 최소화)</td></tr>{{end}}
     <tr><th>점검 항목</th><td>{{join .R.Checks ", "}}</td></tr>
     {{- if .R.Skipped}}<tr><th>제외된 항목</th><td>{{join .R.Skipped ", "}}</td></tr>{{end}}
   </table>

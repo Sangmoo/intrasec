@@ -35,6 +35,7 @@ func (myCheck) Run(ctx context.Context, t checks.Target, s *checks.Session) ([]f
 - 대상 태그와 점검 태그가 하나라도 겹치면 실행된다 (`checks.AppliesTo`).
 - 새 패키지를 만들면 `cmd/intrasec/main.go` 에 blank import 를 추가한다.
 - `Finding.ID`, `FoundAt` 은 엔진이 채운다.
+- `Session.Safe` 가 true(운영 안전 모드)면 경로 탐색 등 부가 요청을 최소화한다. 상한·속도는 transport 가 강제하지만, 상한에 걸려 중요한 항목을 못 보는 일이 없도록 위험도 높은 요청부터 보낸다.
 
 ### 경로 탐색 헬퍼 (`internal/checks/probe.go`)
 

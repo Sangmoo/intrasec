@@ -27,6 +27,9 @@ func (c *Client) TLSHandshake(ctx context.Context, rawURL string, cfg *tls.Confi
 	if c.paused() {
 		return tls.ConnectionState{}, ErrPaused
 	}
+	if err := c.spend(u.Hostname()); err != nil {
+		return tls.ConnectionState{}, err
+	}
 	if err := c.limiter.Wait(ctx); err != nil {
 		return tls.ConnectionState{}, err
 	}

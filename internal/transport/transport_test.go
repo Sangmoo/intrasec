@@ -116,3 +116,27 @@ func TestMasking(t *testing.T) {
 		t.Fatalf("민감값 노출: %s", d)
 	}
 }
+
+func TestRequestBudget(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/r" {
+			http.Redirect(w, r, "/", http.StatusFound)
+		}
+	}))
+	defer srv.Close()
+	c := New(newScope(t, srv.URL), Options{RateLimit: 50, MaxRequestsPerHost: 3})
+	// 리다이렉트 홉도 1건으로 센다: /r -> / = 2건
+	resp, err := c.Get(context.Background(), srv.URL+"/r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	resp, err = c.Get(context.Background(), srv.URL+"/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if _, err := c.Get(context.Background(), srv.URL+"/"); !errors.Is(err, ErrBudget) {
+		t.Fatalf("상한 초과 시 ErrBudget 기대: %v", err)
+	}
+}

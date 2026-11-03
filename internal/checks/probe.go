@@ -73,7 +73,7 @@ func Abort(err error) bool {
 	if errors.Is(err, scope.ErrExcluded) {
 		return false
 	}
-	return errors.Is(err, transport.ErrPaused) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+	return errors.Is(err, transport.ErrPaused) || errors.Is(err, transport.ErrBudget) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }
 
 // ProbeURLs 는 웹 루트 기준 경로와, base_url 에 컨텍스트 경로가 있으면 그 아래 경로를 함께 만든다.

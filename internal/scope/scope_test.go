@@ -151,3 +151,22 @@ func TestResolveAllowedLiteral(t *testing.T) {
 		t.Fatalf("ErrIP 기대, got %v", err)
 	}
 }
+
+func TestSafeModeEffective(t *testing.T) {
+	c, err := Parse([]byte(sample + "options: {safe_mode: true, rate_limit: 10, concurrency: 8}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := c.Options.Effective()
+	if e.RateLimit != SafeRateLimit || e.Concurrency != 1 || e.MaxRequestsPerTarget != SafeMaxRequestsPerTarget || e.PauseOn5xx != SafePauseOn5xx || e.ActiveChecks {
+		t.Fatalf("safe_mode 상한 미적용: %+v", e)
+	}
+	// 설정값이 더 엄격하면 설정값을 따른다.
+	c.Options.RateLimit, c.Options.MaxRequestsPerTarget, c.Options.PauseOn5xx = 1, 20, 2
+	if e := c.Options.Effective(); e.RateLimit != 1 || e.MaxRequestsPerTarget != 20 || e.PauseOn5xx != 2 {
+		t.Fatalf("더 엄격한 설정값이 무시됨: %+v", e)
+	}
+	if _, err := Parse([]byte(sample + "options: {safe_mode: true, active_checks: true}\n")); err == nil {
+		t.Fatal("safe_mode + active_checks 는 거부되어야 함")
+	}
+}

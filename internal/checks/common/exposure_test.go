@@ -2,8 +2,10 @@ package common
 
 import (
 	"context"
+	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/Sangmoo/intrasec/internal/checks/checkstest"
@@ -51,5 +53,24 @@ func TestExposureSoftNotFound(t *testing.T) {
 	}
 	if len(fs) != 0 {
 		t.Fatalf("soft 404 서버에서 오탐: %+v", fs)
+	}
+}
+
+func TestExposureSafeModeMinimal(t *testing.T) {
+	var paths []string
+	var mu sync.Mutex
+	tgt, s := checkstest.Serve(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		paths = append(paths, r.URL.Path)
+		mu.Unlock()
+		http.NotFound(w, r)
+	}))
+	s.Safe = true
+	if _, err := (exposureCheck{}).Run(context.Background(), tgt, s); err != nil {
+		t.Fatal(err)
+	}
+	// soft 404 기준선 1 + /.git/HEAD, /.env, /
+	if len(paths) != 4 {
+		t.Fatalf("운영 안전 모드 요청 수 4 기대, %d: %v", len(paths), paths)
 	}
 }

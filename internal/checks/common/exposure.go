@@ -139,11 +139,17 @@ var exposures = []exposure{
 	},
 }
 
+// safeExposurePaths 는 운영 안전 모드에서도 확인하는 가장 위험도 높은 경로다.
+var safeExposurePaths = map[string]bool{"/.git/HEAD": true, "/.env": true, "/": true}
+
 func (exposureCheck) Run(ctx context.Context, t checks.Target, s *checks.Session) ([]finding.Finding, error) {
 	notFound := s.NotFoundPage(ctx, t)
 	var out []finding.Finding
 	for _, e := range exposures {
 		for _, path := range e.paths {
+			if s.Safe && !safeExposurePaths[path] {
+				continue
+			}
 			for _, u := range checks.ProbeURLs(t, path) {
 				p, err := checks.Fetch(ctx, s, u)
 				if err != nil {

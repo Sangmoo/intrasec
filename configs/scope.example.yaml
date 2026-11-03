@@ -41,3 +41,8 @@ options:
   concurrency: 4
   active_checks: false                      # true 일 때만 active 레벨 점검 실행
   timeout_sec: 15
+  # 운영 중인 시스템이면 true 권장 (--safe 플래그와 동일).
+  # 초당 2요청·동시 1·호스트당 60요청 상한·연속 5xx 3회 일시정지·passive 전용·경로 탐색 최소화가 강제됩니다.
+  safe_mode: false
+  # max_requests_per_target: 0              # 호스트당 요청 상한 (0 = 무제한, safe_mode 기본 60)
+  # pause_on_5xx: 10                        # 연속 5xx 일시정지 기준 (safe_mode 기본 3)

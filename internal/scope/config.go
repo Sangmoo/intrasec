@@ -62,6 +62,12 @@ type Options struct {
 	Concurrency  int     `yaml:"concurrency"`
 	ActiveChecks bool    `yaml:"active_checks"`
 	TimeoutSec   int     `yaml:"timeout_sec"`
+	// SafeMode 는 운영 중인 시스템용 저부하 모드다. Effective() 참고.
+	SafeMode bool `yaml:"safe_mode"`
+	// MaxRequestsPerTarget 은 호스트당 요청(TLS 핸드셰이크 포함) 상한이다. 0 이면 무제한 (safe_mode 에서는 기본 60).
+	MaxRequestsPerTarget int `yaml:"max_requests_per_target"`
+	// PauseOn5xx 는 연속 5xx 응답이 이 횟수에 이르면 자동 일시정지한다. 0 이면 기본값 (일반 10, safe_mode 3).
+	PauseOn5xx int `yaml:"pause_on_5xx"`
 }
 
 const (
@@ -70,7 +76,37 @@ const (
 	DefaultTimeoutSec  = 15
 	MaxRateLimit       = 50
 	MaxConcurrency     = 32
+	DefaultPauseOn5xx  = 10
+
+	// 운영 안전 모드(safe_mode) 상한
+	SafeRateLimit            = 2
+	SafeConcurrency          = 1
+	SafeMaxRequestsPerTarget = 60
+	SafePauseOn5xx           = 3
 )
+
+// Effective 는 safe_mode 를 반영한 실제 적용 옵션을 돌려준다.
+// safe_mode 에서는 초당 2요청·동시 1개·호스트당 60요청 상한·연속 5xx 3회 일시정지·active 점검 금지가 강제되며,
+// 설정값이 이보다 엄격하면 설정값을 따른다.
+func (o Options) Effective() Options {
+	e := o
+	if e.PauseOn5xx == 0 {
+		e.PauseOn5xx = DefaultPauseOn5xx
+	}
+	if !e.SafeMode {
+		return e
+	}
+	e.ActiveChecks = false
+	e.RateLimit = min(e.RateLimit, SafeRateLimit)
+	e.Concurrency = SafeConcurrency
+	if e.MaxRequestsPerTarget == 0 || e.MaxRequestsPerTarget > SafeMaxRequestsPerTarget {
+		e.MaxRequestsPerTarget = SafeMaxRequestsPerTarget
+	}
+	if o.PauseOn5xx == 0 || o.PauseOn5xx > SafePauseOn5xx {
+		e.PauseOn5xx = SafePauseOn5xx
+	}
+	return e
+}
 
 // Load 는 파일을 읽어 파싱·기본값 적용·검증까지 수행한다.
 func Load(path string) (*Config, error) {
@@ -182,6 +218,12 @@ func (c *Config) Validate() error {
 	}
 	if o.TimeoutSec < 1 {
 		add("options.timeout_sec 는 1 이상")
+	}
+	if o.SafeMode && o.ActiveChecks {
+		add("options.safe_mode 와 active_checks 는 함께 사용할 수 없음 (운영 안전 모드는 passive 점검만 허용)")
+	}
+	if o.MaxRequestsPerTarget < 0 || o.PauseOn5xx < 0 {
+		add("options.max_requests_per_target / pause_on_5xx 는 0 이상")
 	}
 
 	return errors.Join(errs...)

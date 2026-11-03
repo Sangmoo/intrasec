@@ -25,6 +25,7 @@ var (
 	ErrMethodBlocked = errors.New("차단된 HTTP 메서드")
 	ErrPaused        = errors.New("연속 5xx 응답으로 자동 일시정지됨")
 	ErrTooManyHops   = errors.New("리다이렉트 횟수 초과")
+	ErrBudget        = errors.New("호스트당 요청 상한 도달")
 )
 
 const (
@@ -49,7 +50,21 @@ type Options struct {
 	AllowUnsafe  bool // DELETE/PUT/PATCH 허용 (기본 false)
 	Max5xx       int
 	MaxRedirects int
-	Record       func(Entry)
+	// MaxRequestsPerHost 는 호스트당 요청 상한이다 (리다이렉트 홉·TLS 핸드셰이크 포함). 0 이면 무제한.
+	MaxRequestsPerHost int
+	Record             func(Entry)
+}
+
+// NewFromScope 는 scope 의 실제 적용 옵션(safe_mode 반영)으로 클라이언트를 만든다.
+func NewFromScope(s *scope.Scope, record func(Entry)) *Client {
+	o := s.Config().Options.Effective()
+	return New(s, Options{
+		RateLimit:          o.RateLimit,
+		Timeout:            time.Duration(o.TimeoutSec) * time.Second,
+		Max5xx:             o.PauseOn5xx,
+		MaxRequestsPerHost: o.MaxRequestsPerTarget,
+		Record:             record,
+	})
 }
 
 type Client struct {
@@ -60,6 +75,7 @@ type Client struct {
 
 	mu        sync.Mutex
 	consec5xx int
+	spent     map[string]int // 호스트 -> 요청 수
 }
 
 func New(s *scope.Scope, o Options) *Client {
@@ -79,6 +95,7 @@ func New(s *scope.Scope, o Options) *Client {
 		scope:   s,
 		opts:    o,
 		limiter: rate.NewLimiter(rate.Limit(o.RateLimit), 1),
+		spent:   map[string]int{},
 	}
 	dialer := &net.Dialer{Timeout: o.Timeout}
 	tr := &http.Transport{
@@ -137,6 +154,9 @@ func (c *Client) checkRedirect(req *http.Request, via []*http.Request) error {
 	if err := c.scope.AllowURL(req.URL); err != nil {
 		return fmt.Errorf("리다이렉트 차단: %w", err)
 	}
+	if err := c.spend(req.URL.Hostname()); err != nil {
+		return err
+	}
 	return c.limiter.Wait(req.Context())
 }
 
@@ -150,6 +170,9 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	}
 	if c.paused() {
 		return nil, ErrPaused
+	}
+	if err := c.spend(req.URL.Hostname()); err != nil {
+		return nil, err
 	}
 	if err := c.limiter.Wait(req.Context()); err != nil {
 		return nil, err
@@ -208,6 +231,20 @@ func (c *Client) paused() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.consec5xx >= c.opts.Max5xx
+}
+
+// spend 는 호스트별 요청 수를 하나 늘리고, 상한을 넘으면 ErrBudget 을 돌려준다.
+func (c *Client) spend(host string) error {
+	if c.opts.MaxRequestsPerHost <= 0 {
+		return nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.spent[host] >= c.opts.MaxRequestsPerHost {
+		return fmt.Errorf("%w: %s (%d건)", ErrBudget, host, c.opts.MaxRequestsPerHost)
+	}
+	c.spent[host]++
+	return nil
 }
 
 // Resume 은 자동 일시정지를 해제한다.

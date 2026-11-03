@@ -41,6 +41,9 @@ type Target struct {
 // 플러그인은 반드시 HTTP 로만 요청해야 하며 자체 클라이언트를 만들면 안 된다.
 type Session struct {
 	HTTP *transport.Client
+	// Safe 는 운영 안전 모드 여부다. true 면 플러그인은 경로 탐색 등 부가 요청을 최소화해야 한다.
+	// (요청 속도·상한·active 금지는 엔진과 transport 가 별도로 강제한다)
+	Safe bool
 
 	notFound sync.Map // 대상 base URL -> *Page (soft 404 기준선)
 }

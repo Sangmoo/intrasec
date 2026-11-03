@@ -46,7 +46,11 @@ func (errorDisclosureCheck) Run(ctx context.Context, t checks.Target, s *checks.
 	_, _ = rand.Read(b)
 	rnd := "intrasec-" + hex.EncodeToString(b)
 	urls := []string{t.BaseURL.String()}
-	for _, ext := range []string{".jsp", ".do", ".aspx"} {
+	exts := []string{".jsp", ".do", ".aspx"}
+	if s.Safe {
+		exts = exts[:1]
+	}
+	for _, ext := range exts {
 		urls = append(urls, t.BaseURL.ResolveReference(&url.URL{Path: "/" + rnd + ext}).String())
 	}
 

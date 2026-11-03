@@ -103,3 +103,21 @@ func TestActiveChecksGated(t *testing.T) {
 		t.Fatal("active_checks: true 인데 active 점검이 실행되지 않음")
 	}
 }
+
+func TestSafeModePlan(t *testing.T) {
+	s, _ := setup(t, false)
+	s.Config().Options.SafeMode = true
+	p, err := NewPlan(s, []checks.Check{&fakeCheck{id: "P"}, &fakeCheck{id: "A", level: checks.Active}}, inWindow())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Jobs) != 1 || p.Jobs[0].Check.ID() != "P" {
+		t.Fatalf("safe_mode 에서는 passive 만: %+v", p.Jobs)
+	}
+	if len(p.Skipped) != 1 || !strings.Contains(p.Skipped[0], "safe_mode") {
+		t.Fatalf("제외 사유 누락: %v", p.Skipped)
+	}
+	if p.Options.Concurrency != 1 || p.Options.RateLimit != scope.SafeRateLimit {
+		t.Fatalf("safe_mode 옵션 미반영: %+v", p.Options)
+	}
+}

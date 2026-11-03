@@ -51,8 +51,16 @@ func (c phpCheck) Run(ctx context.Context, t checks.Target, s *checks.Session) (
 		errReported = true
 	}
 
-	notFound := s.NotFoundPage(ctx, t)
-	for _, p := range probes {
+	// 운영 안전 모드에서는 경로 탐색 없이 헤더 기반 버전 판단만 한다.
+	activeProbes := probes
+	if s.Safe {
+		activeProbes = nil
+	}
+	var notFound *checks.Page
+	if len(activeProbes) > 0 {
+		notFound = s.NotFoundPage(ctx, t)
+	}
+	for _, p := range activeProbes {
 		for _, u := range checks.ProbeURLs(t, p.path) {
 			page, err := checks.Fetch(ctx, s, u)
 			if err != nil {

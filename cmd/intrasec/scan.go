@@ -29,16 +29,26 @@ func newScanCmd() *cobra.Command {
 		out       string
 		format    string
 		auditPath string
+		safe      bool
+		dryRun    bool
 	)
 	cmd := &cobra.Command{
 		Use:   "scan",
 		Short: "scope.yaml 기준으로 점검 실행",
 		Example: `  intrasec scan -c scope.yaml
-  intrasec scan -c scope.yaml --only weblogic,headers -o report.html`,
+  intrasec scan -c scope.yaml --only weblogic,headers -o report.html
+  intrasec scan -c scope.yaml --safe --dry-run     # 운영 시스템: 실행 계획만 확인
+  intrasec scan -c scope.yaml --safe -o report.html`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := scope.Load(scopePath)
 			if err != nil {
 				return err
+			}
+			if safe {
+				if cfg.Options.ActiveChecks {
+					fmt.Fprintln(cmd.ErrOrStderr(), "--safe: active_checks 를 비활성화합니다")
+				}
+				cfg.Options.SafeMode, cfg.Options.ActiveChecks = true, false
 			}
 			sc, err := scope.New(cfg)
 			if err != nil {
@@ -55,17 +65,28 @@ func newScanCmd() *cobra.Command {
 				return fmt.Errorf("--only %v 에 해당하는 점검 항목이 없음", only)
 			}
 
+			w := cmd.ErrOrStderr()
+			if dryRun {
+				plan, err := engine.NewPlan(sc, selected, time.Now())
+				if err != nil {
+					return err
+				}
+				printPlan(cmd.OutOrStdout(), cfg, plan)
+				return nil
+			}
+
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
 
-			w := cmd.ErrOrStderr()
 			fmt.Fprintf(w, "점검: %s (승인: %s, %s)\n", cfg.Engagement.Name, cfg.Engagement.ApprovedBy, cfg.Engagement.ApprovalRef)
+			if cfg.Options.SafeMode {
+				e := cfg.Options.Effective()
+				fmt.Fprintf(w, "운영 안전 모드: 초당 %v요청, 동시 %d, 호스트당 최대 %d요청, 연속 5xx %d회 시 일시정지, passive 전용\n",
+					e.RateLimit, e.Concurrency, e.MaxRequestsPerTarget, e.PauseOn5xx)
+			}
 			res, err := engine.Run(ctx, engine.Options{
-				Scope: sc,
-				HTTP: transport.New(sc, transport.Options{
-					RateLimit: cfg.Options.RateLimit,
-					Timeout:   time.Duration(cfg.Options.TimeoutSec) * time.Second,
-				}),
+				Scope:  sc,
+				HTTP:   transport.NewFromScope(sc, nil),
 				Checks: selected,
 				Audit:  al,
 				Progress: func(p engine.Progress) {
@@ -109,6 +130,8 @@ func newScanCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&out, "output", "o", "", "리포트 출력 파일 (확장자로 형식 추정)")
 	cmd.Flags().StringVar(&format, "format", "", "리포트 형식 강제 (html|json|md|sarif)")
 	cmd.Flags().StringVar(&auditPath, "audit-log", filepath.Join(resultsDir, "audit.log"), "감사 로그 파일")
+	cmd.Flags().BoolVar(&safe, "safe", false, "운영 안전 모드 (scope.yaml 의 options.safe_mode: true 와 동일)")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "요청을 보내지 않고 실행 계획만 출력")
 	return cmd
 }
 

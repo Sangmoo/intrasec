@@ -18,7 +18,11 @@ func WriteMarkdown(w io.Writer, r *engine.Result) error {
 	fmt.Fprintf(&b, "| 승인자 | %s |\n", mdEscape(r.ApprovedBy))
 	fmt.Fprintf(&b, "| 승인 근거 | %s |\n", mdEscape(r.ApprovalRef))
 	fmt.Fprintf(&b, "| 점검 시각 | %s ~ %s |\n", r.StartedAt.Format(time.DateTime), r.FinishedAt.Format(time.DateTime))
-	fmt.Fprintf(&b, "| 대상 | %s |\n\n", mdEscape(strings.Join(r.Targets, ", ")))
+	fmt.Fprintf(&b, "| 대상 | %s |\n", mdEscape(strings.Join(r.Targets, ", ")))
+	if r.SafeMode {
+		b.WriteString("| 모드 | 운영 안전 모드 (저부하·passive 전용, 경로 탐색 최소화) |\n")
+	}
+	b.WriteString("\n")
 
 	counts := finding.CountBySeverity(r.Findings)
 	b.WriteString("## 요약\n\n| 심각도 | 건수 |\n|---|---|\n")
