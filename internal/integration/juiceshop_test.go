@@ -22,6 +22,8 @@ import (
 	"github.com/Sangmoo/intrasec/internal/checks"
 	_ "github.com/Sangmoo/intrasec/internal/checks/common"
 	_ "github.com/Sangmoo/intrasec/internal/checks/php"
+	_ "github.com/Sangmoo/intrasec/internal/checks/weblogic"
+	_ "github.com/Sangmoo/intrasec/internal/checks/xplatform"
 	"github.com/Sangmoo/intrasec/internal/engine"
 	"github.com/Sangmoo/intrasec/internal/scope"
 	"github.com/Sangmoo/intrasec/internal/transport"

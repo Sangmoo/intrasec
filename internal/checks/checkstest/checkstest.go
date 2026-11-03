@@ -3,6 +3,7 @@ package checkstest
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -21,7 +22,22 @@ func Serve(t *testing.T, h http.Handler, tags ...string) (checks.Target, *checks
 	t.Helper()
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
-	return session(t, srv, tags)
+	return session(t, srv, Opts{Tags: tags})
+}
+
+// Opts 는 대상의 추가 설정이다.
+type Opts struct {
+	Tags        []string
+	Ports       []int    // scope 에서 추가로 허용할 포트
+	ServiceURLs []string // base_url 기준 상대 경로 가능
+}
+
+// ServeOpts 는 Serve 와 같되 대상의 추가 포트·서비스 URL 을 지정한다.
+func ServeOpts(t *testing.T, h http.Handler, o Opts) (checks.Target, *checks.Session) {
+	t.Helper()
+	srv := httptest.NewServer(h)
+	t.Cleanup(srv.Close)
+	return session(t, srv, o)
 }
 
 // ServeTLS 는 cfg(nil 이면 httptest 기본값)로 HTTPS 서버를 띄운다.
@@ -35,17 +51,19 @@ func ServeTLS(t *testing.T, h http.Handler, cfg *tls.Config, tags ...string) (ch
 	srv.Config.ErrorLog = log.New(io.Discard, "", 0) // 점검의 의도적 핸드셰이크 실패 로그 숨김
 	srv.StartTLS()
 	t.Cleanup(srv.Close)
-	return session(t, srv, tags)
+	return session(t, srv, Opts{Tags: tags})
 }
 
-func session(t *testing.T, srv *httptest.Server, tags []string) (checks.Target, *checks.Session) {
+func session(t *testing.T, srv *httptest.Server, o Opts) (checks.Target, *checks.Session) {
 	t.Helper()
+	ports, _ := json.Marshal(o.Ports)
+	svc, _ := json.Marshal(o.ServiceURLs)
 	y := fmt.Sprintf(`
 engagement: {name: t, approved_by: a, approval_ref: r, window: {start: "2000-01-01T00:00:00Z", end: "2100-01-01T00:00:00Z"}}
-targets: [{name: lab, base_url: %q}]
+targets: [{name: lab, base_url: %q, ports: %s, service_urls: %s}]
 allow: {cidrs: [127.0.0.1/32]}
 options: {rate_limit: 50}
-`, srv.URL)
+`, srv.URL, ports, svc)
 	cfg, err := scope.Parse([]byte(y))
 	if err != nil {
 		t.Fatal(err)
@@ -55,8 +73,12 @@ options: {rate_limit: 50}
 		t.Fatal(err)
 	}
 	u, _ := url.Parse(srv.URL)
-	return checks.Target{Name: "lab", BaseURL: u, Tags: tags},
-		&checks.Session{HTTP: transport.New(sc, transport.Options{RateLimit: 50})}
+	tgt := checks.Target{Name: "lab", BaseURL: u, Tags: o.Tags, Ports: o.Ports}
+	for _, s := range o.ServiceURLs {
+		ref, _ := url.Parse(s)
+		tgt.ServiceURLs = append(tgt.ServiceURLs, u.ResolveReference(ref))
+	}
+	return tgt, &checks.Session{HTTP: transport.New(sc, transport.Options{RateLimit: 50})}
 }
 
 // Files 는 경로 -> (Content-Type, 본문) 맵으로 응답하고 나머지는 404 를 주는 핸들러다.

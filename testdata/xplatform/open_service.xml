@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns="http://www.tobesoft.com/platform/Dataset" ver="4000">
+	<Parameters>
+		<Parameter id="ErrorCode" type="int">0</Parameter>
+		<Parameter id="ErrorMsg" type="string">SUCC</Parameter>
+	</Parameters>
+	<Dataset id="ds_user">
+		<ColumnInfo>
+			<Column id="USER_ID" type="STRING" size="20"/>
+			<Column id="USER_NM" type="STRING" size="50"/>
+		</ColumnInfo>
+		<Rows>
+			<Row><Col id="USER_ID">U0001</Col><Col id="USER_NM">REDACTED</Col></Row>
+			<Row><Col id="USER_ID">U0002</Col><Col id="USER_NM">REDACTED</Col></Row>
+		</Rows>
+	</Dataset>
+</Root>

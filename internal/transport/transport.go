@@ -72,6 +72,7 @@ type Client struct {
 	opts    Options
 	limiter *rate.Limiter
 	hc      *http.Client
+	anon    *http.Client // 쿠키 저장소 없는 클라이언트 (세션 없이 요청)
 
 	mu        sync.Mutex
 	consec5xx int
@@ -113,6 +114,7 @@ func New(s *scope.Scope, o Options) *Client {
 		MaxIdleConnsPerHost:   4,
 		IdleConnTimeout:       30 * time.Second,
 	}
+	c.anon = &http.Client{Transport: tr, Timeout: o.Timeout, CheckRedirect: c.checkRedirect}
 	jar, _ := cookiejar.New(nil)
 	c.hc = &http.Client{
 		Transport:     tr,
@@ -182,7 +184,11 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	}
 
 	start := time.Now()
-	resp, err := c.hc.Do(req)
+	hc := c.hc
+	if IsAnonymous(req.Context()) {
+		hc = c.anon
+	}
+	resp, err := hc.Do(req)
 	e := Entry{Time: start, Method: req.Method, URL: req.URL.String(), Duration: time.Since(start)}
 	if err != nil {
 		e.Err = err.Error()

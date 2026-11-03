@@ -15,6 +15,9 @@ targets:
     base_url: https://erp.example.local
     ports: [443, 7001]
     tags: [weblogic, xplatform]
+    service_urls:                           # XP-001: 세션 없이 호출해 볼 조회성 서비스 (저장·삭제류는 거부됨)
+      - /erp/svc/selectUserList.do
+      - /erp/svc/selectNoticeList.do
   - name: 그룹웨어
     base_url: https://gw.example.local
     tags: [groupware]
@@ -34,7 +37,9 @@ auth:
     username_field: userId
     password_field: userPw
     username: scan_test01
-    password_env: INTRASEC_ERP_PW           # 비밀번호는 환경변수로 (password: 필드는 거부됨)
+    password_env: INTRASEC_ERP_PW           # 비밀번호는 환경변수로 (없으면 실행 시 입력, password: 필드는 거부됨)
+    check_url: https://erp.example.local/main.do     # (선택) 로그인해야 열리는 페이지 — 로그인 성공 확인용
+    # logged_out_pattern: "세션이 만료|로그인이 필요"   # (선택) 세션 만료 응답 판별 정규식
 
 options:
   rate_limit: 5                             # 초당 요청 수

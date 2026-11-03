@@ -35,6 +35,28 @@ type Target struct {
 	Name    string
 	BaseURL *url.URL
 	Tags    []string
+	// Ports 는 scope 에서 추가로 허용한 포트다 (예: WebLogic 7001).
+	Ports []int
+	// ServiceURLs 는 scope 에 등록한 서비스 호출 URL(절대 경로)이다.
+	ServiceURLs []*url.URL
+}
+
+// HasTag 는 대상에 태그가 있는지 확인한다 (대소문자 무시).
+func (t Target) HasTag(tag string) bool {
+	for _, x := range t.Tags {
+		if strings.EqualFold(x, tag) {
+			return true
+		}
+	}
+	return false
+}
+
+// Authenticator 는 대상별 로그인 세션 관리자다 (internal/auth 가 구현).
+type Authenticator interface {
+	// LoggedOut 은 requested 로 요청한 결과 p 가 세션 만료(로그아웃) 상태로 보이는지 판단한다.
+	LoggedOut(requested string, p *Page) bool
+	// Relogin 은 다시 로그인한다. 짧은 시간 안의 반복 재로그인은 거부한다.
+	Relogin(ctx context.Context) error
 }
 
 // Session 은 점검 실행 중 플러그인에 주어지는 공유 자원이다.
@@ -44,6 +66,8 @@ type Session struct {
 	// Safe 는 운영 안전 모드 여부다. true 면 플러그인은 경로 탐색 등 부가 요청을 최소화해야 한다.
 	// (요청 속도·상한·active 금지는 엔진과 transport 가 별도로 강제한다)
 	Safe bool
+	// Auth 는 호스트명(소문자) -> 인증 관리자다. 없으면 비로그인 점검.
+	Auth map[string]Authenticator
 
 	notFound sync.Map // 대상 base URL -> *Page (soft 404 기준선)
 }

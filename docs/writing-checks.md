@@ -42,7 +42,11 @@ func (myCheck) Run(ctx context.Context, t checks.Target, s *checks.Session) ([]f
 - `checks.Fetch(ctx, s, url)`: GET + 본문 읽기(최대 512KB). `Page.Evidence` 는 요청·응답 헤더만 담는다.
 - `checks.ProbeURLs(t, "/.git/HEAD")`: 웹 루트와 base_url 컨텍스트 경로 아래 URL 을 함께 만든다.
 - `s.NotFoundPage(ctx, t)` + `checks.Found(page, notFound)`: soft 404 서버 오탐 방지.
-- `checks.Abort(err)`: 자동 일시정지·취소면 탐색을 멈추고, 제외 경로 등은 건너뛴다.
+- `checks.Abort(err)`: 자동 일시정지·취소·요청 상한이면 탐색을 멈추고, 제외 경로 등은 건너뛴다.
+- `transport.Anonymous(ctx)`: 로그인 세션 쿠키 없이 요청한다 (인증 누락 확인용). 이때는 재로그인도 하지 않는다.
+- `s.HTTP.TCPExchange(ctx, host, port, payload, max)`: HTTP 가 아닌 프로토콜 핸드셰이크(예: T3). 스코프·상한이 동일하게 적용된다. 공격 페이로드는 보내지 않는다.
+- `s.HTTP.TLSHandshake(ctx, url, cfg)`: HTTP 요청 없이 TLS 핸드셰이크만.
+- `t.Ports`, `t.ServiceURLs`, `t.HasTag(...)`: scope 의 대상 설정.
 
 ## 3. 테스트
 

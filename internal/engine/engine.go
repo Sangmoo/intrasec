@@ -23,9 +23,18 @@ type Options struct {
 	HTTP   *transport.Client
 	Checks []checks.Check
 	Audit  *audit.Logger
+	// Auth 는 대상별 로그인 세션 관리자다. 점검 시작 시 로그인하며, 실패한 대상은 비로그인으로 점검한다.
+	Auth []Authenticator
 	// Progress 는 작업 하나가 끝날 때마다 호출된다 (SSE·CLI 진행 표시용). nil 가능.
 	Progress func(Progress)
 	Now      func() time.Time
+}
+
+// Authenticator 는 internal/auth.Form 이 구현한다.
+type Authenticator interface {
+	checks.Authenticator
+	Host() string
+	Login(ctx context.Context) error
 }
 
 type Progress struct {
@@ -134,7 +143,14 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 	o.Audit.Log(audit.Event{Action: "scan.start", ScanID: res.ScanID, Engagement: res.Engagement,
 		Detail: fmt.Sprintf("targets=%d checks=%d jobs=%d safe_mode=%v", len(plan.Targets), len(plan.Checks), len(jobs), plan.Options.SafeMode)})
 
-	sess := &checks.Session{HTTP: o.HTTP, Safe: plan.Options.SafeMode}
+	sess := &checks.Session{HTTP: o.HTTP, Safe: plan.Options.SafeMode, Auth: map[string]checks.Authenticator{}}
+	for _, a := range o.Auth {
+		if err := a.Login(ctx); err != nil {
+			res.Errors = append(res.Errors, fmt.Sprintf("로그인 실패 (%s, 비로그인으로 점검): %v", a.Host(), err))
+			continue
+		}
+		sess.Auth[a.Host()] = a
+	}
 	timeout := time.Duration(plan.Options.TimeoutSec) * time.Second * 4
 
 	var (
@@ -208,7 +224,15 @@ func buildTargets(cfg *scope.Config) ([]checks.Target, error) {
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, checks.Target{Name: t.Name, BaseURL: u, Tags: t.Tags})
+		ct := checks.Target{Name: t.Name, BaseURL: u, Tags: t.Tags, Ports: t.Ports}
+		for _, su := range t.ServiceURLs {
+			ref, err := url.Parse(su)
+			if err != nil {
+				return nil, err
+			}
+			ct.ServiceURLs = append(ct.ServiceURLs, u.ResolveReference(ref))
+		}
+		out = append(out, ct)
 	}
 	return out, nil
 }

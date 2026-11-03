@@ -20,11 +20,12 @@
 | COMMON-EXP-002 | `.env` 노출 (Critical) / 백업·설정 파일 노출 (`.bak`, `~`, `.sql`, `.zip`, `web.xml`, `.DS_Store`) | High | passive | `COMMON-EXP` | CWE-538/530, KISA IL | ✅ |
 | COMMON-EXP-003 | 디렉터리 리스팅 활성화 | Medium | passive | `COMMON-EXP` | CWE-548, KISA DI | ✅ |
 | COMMON-ERR-001 | 상세 에러/스택트레이스 노출 (Java, ASP.NET, Python, Node.js, DB 오류) / 에러 페이지 WAS 버전(Low) | Medium | passive | `COMMON-ERR` | CWE-209, A05:2021, KISA IL | ✅ |
-| WLS-001 | WebLogic 관리 콘솔 접근 가능 | High | passive | | | 🚧 |
-| WLS-002 | WebLogic 버전 노출 | Low | passive | | | 🚧 |
-| WLS-003 | T3/IIOP 프로토콜 노출 | High | passive | | | 🚧 |
-| XP-001 | 서비스 URL 세션 없이 응답 | Critical | passive | | | 🚧 |
-| XP-002 | 서비스 통신 평문 전송 | High | passive | | | 🚧 |
+| WLS-001 | WebLogic 관리 콘솔(/console) · EM(/em) 접근 가능 | High | passive | `WLS` | CWE-306, KISA AE | ✅ |
+| WLS-002 | WebLogic 버전 노출 (Server 헤더, 콘솔 화면, T3 HELO) / 10.3·12.1 구 계열 안내 | Low | passive | `WLS` | CWE-200, KISA IL | ✅ |
+| WLS-003 | T3/IIOP 프로토콜 노출 (T3 인사·GIOP LocateRequest 응답 확인, 페이로드 없음) | High | passive | `WLS` | CWE-502, A08:2021 | ✅ |
+| WLS-004 | 취약 컴포넌트 노출: wls-wsat(CVE-2017-10271), _async(CVE-2019-2725), uddiexplorer(CVE-2014-4210) | High | passive | `WLS` | CWE-502/918 | ✅ |
+| XP-001 | 서비스 URL 세션 없이 응답 (데이터 반환 시 Critical, 빈 정상 응답 High) | Critical | passive | `XP` | CWE-306/862, KISA IA | ✅ |
+| XP-002 | 서비스 통신 평문(HTTP) 전송 | High | passive | `XP` | CWE-319, KISA SN | ✅ |
 | PHP-001 | 지원 종료(EOL) PHP 버전 / 종료 90일 이내 | High / Low | passive | `PHP` | CWE-1104, A06:2021 | ✅ |
 | PHP-002 | PHP2Shell RCE 취약 버전 (CVE-2026-109618/109619, CISA KEV) | Critical | passive | `PHP` | A06:2021 | ✅ |
 | PHP-003 | Windows PHP-CGI 인자 주입 취약 버전 (CVE-2024-4577, KEV) | Critical / High | passive | `PHP` | CWE-78, A06:2021 | ✅ |
@@ -54,6 +55,9 @@
 - **TLS 점검**: HTTP 요청 없이 핸드셰이크만 수행한다 (`transport.TLSHandshake`, 스코프·레이트리밋 동일 적용). 버전별 1회, 취약 스위트 묶음별 1회로 대상당 약 6회 연결한다. 인증서는 공인 루트 기준으로 검증하므로 사내 CA 인증서는 "검증되지 않는 체인"(Low)으로 표시될 수 있다.
 - **로그인 평문 전송**: https 대상은 같은 호스트의 http(80) 도 확인하지만, scope 의 `ports` 에 80 이 없으면 요청하지 않는다.
 - **상세 에러**: 기본 페이지와 존재하지 않는 `.jsp/.do/.aspx` 경로의 오류 응답만 본다. 파라미터 변조로 오류를 유도하는 점검은 active 레벨로 별도 구현 예정.
+- **WebLogic 대상 판별**: `tags: [weblogic]` 이거나, 기본·404 페이지에 WebLogic 흔적(Server 헤더, "From RFC 2068" 기본 오류 페이지)이 있을 때만 점검한다. base_url 포트와 `ports` 의 각 포트에서 HTTP/HTTPS 를 자동 판별하고, T3·IIOP 핸드셰이크를 1회씩 보낸다 (T3 에 일반 HTTP 오류로 답한 포트는 IIOP 생략). 응답 없는 포트는 최대 5초만 기다린다.
+- **XPlatform 서비스 (XP-001)**: `targets[].service_urls` 에 등록한 **조회성** 서비스만 세션 쿠키 없이 빈 파라미터로 1회 호출한다. `save/insert/update/delete/approve/submit/exec/upload` 등이 들어간 서비스는 scope 검증에서 거부된다. 응답 ErrorCode 가 0 이상이면 인증 누락으로 보고하고, 행 수·데이터셋 이름만 기록하며 값은 기록하지 않는다.
+- **인증 (auth)**: 점검 시작 시 로그인하고, 응답이 로그인 페이지로 리다이렉트되거나 401 이거나 `logged_out_pattern` 에 맞으면 세션 만료로 보고 재로그인 후 한 번 재요청한다. 재로그인은 대상당 최대 5회, 직전 로그인 후 10초 안에는 하지 않는다 (계정 잠금 방지). 로그인 실패 시 해당 대상은 비로그인으로 점검하고 결과의 실행 오류에 남긴다.
 - **세션 쿠키 판별**: 이름에 `session`, `sessid`, `jsessionid`, `sid`, `token`, `auth` 등이 포함된 쿠키만 대상으로 한다.
 - **버전 노출**: `Server` 헤더에 `숫자.숫자` 형태가 있거나 `X-Powered-By`, `X-AspNet-Version` 헤더가 있으면 보고한다.
 - 리다이렉트를 따라간 **최종 응답**을 기준으로 판단하며, 최종 URL 이 `Target` 으로 기록된다.

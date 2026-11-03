@@ -84,9 +84,15 @@ func newScanCmd() *cobra.Command {
 				fmt.Fprintf(w, "운영 안전 모드: 초당 %v요청, 동시 %d, 호스트당 최대 %d요청, 연속 5xx %d회 시 일시정지, passive 전용\n",
 					e.RateLimit, e.Concurrency, e.MaxRequestsPerTarget, e.PauseOn5xx)
 			}
+			client := transport.NewFromScope(sc, nil)
+			auths, err := buildAuth(cfg, client, al)
+			if err != nil {
+				return err
+			}
 			res, err := engine.Run(ctx, engine.Options{
 				Scope:  sc,
-				HTTP:   transport.NewFromScope(sc, nil),
+				HTTP:   client,
+				Auth:   auths,
 				Checks: selected,
 				Audit:  al,
 				Progress: func(p engine.Progress) {

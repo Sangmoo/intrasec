@@ -72,6 +72,7 @@ internal/scope/        scope.yaml 파싱·검증, IP 기준 허용 판단, 시�
 internal/transport/    공통 HTTP 클라이언트 (스코프·레이트리밋·리다이렉트 재검사·마스킹)
 internal/engine/       점검 오케스트레이션, 워커 풀, 레벨 강제
 internal/checks/       점검 플러그인 (common / php / weblogic / xplatform / groupware)
+internal/auth/         폼 로그인, 세션 유지, 만료 감지 후 재로그인
 internal/report/       HTML / JSON / Markdown / SARIF 리포트
 internal/audit/        감사 로그 (JSON Lines)
 internal/server/       로컬 웹 UI API (토큰, Host 검증)
@@ -82,8 +83,8 @@ pkg/finding/           Finding 모델
 
 ## 로드맵
 
-- **M1** 엔진 기반 (CLI): scope, transport, engine, common 점검(헤더·TLS·쿠키·노출 파일·에러), PHP 점검, 리포트, Juice Shop 통합 테스트 — v0.1.0 릴리스 대기
-- **M2** 사내 시스템 특화 + 인증: auth, weblogic, xplatform, HTML 리포트
+- **M1** 엔진 기반 (CLI): scope, transport, engine, common 점검(헤더·TLS·쿠키·노출 파일·에러), PHP 점검, 리포트, Juice Shop 통합 테스트 — [v0.1.0](https://github.com/Sangmoo/intrasec/releases/tag/v0.1.0)
+- **M2** 사내 시스템 특화 + 인증: auth(폼 로그인·재로그인), weblogic(WLS-001~004), xplatform(XP-001~002), HTML 리포트 — 구현 완료, 사내 스테이징 실전 점검 대기
 - **M3** 웹 UI: server, store(SQLite), Svelte UI, GoReleaser
 - **M4** 확장: Nuclei, groupware, SARIF, KISA 매핑, diff 리포트
 

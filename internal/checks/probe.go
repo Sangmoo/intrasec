@@ -30,7 +30,28 @@ type Page struct {
 }
 
 // Fetch 는 rawURL 에 GET 요청을 보내고 본문을 MaxProbeBody 까지 읽는다.
+// 로그인 설정이 있는 대상에서 세션 만료가 감지되면 한 번 재로그인 후 다시 요청한다.
+// 세션 없이 요청하려면 ctx 를 transport.Anonymous(ctx) 로 감싼다.
 func Fetch(ctx context.Context, s *Session, rawURL string) (*Page, error) {
+	p, err := fetch(ctx, s, rawURL)
+	if err != nil || transport.IsAnonymous(ctx) {
+		return p, err
+	}
+	u, perr := url.Parse(rawURL)
+	if perr != nil {
+		return p, err
+	}
+	a := s.Auth[strings.ToLower(u.Hostname())]
+	if a == nil || !a.LoggedOut(rawURL, p) {
+		return p, nil
+	}
+	if rerr := a.Relogin(ctx); rerr != nil {
+		return p, nil //nolint:nilerr // 재로그인 실패는 비로그인 응답으로 계속 판단한다 (감사 로그에 기록됨)
+	}
+	return fetch(ctx, s, rawURL)
+}
+
+func fetch(ctx context.Context, s *Session, rawURL string) (*Page, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, err

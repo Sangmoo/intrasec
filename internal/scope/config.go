@@ -8,6 +8,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -40,7 +41,13 @@ type Target struct {
 	BaseURL string   `yaml:"base_url"`
 	Ports   []int    `yaml:"ports"`
 	Tags    []string `yaml:"tags"`
+	// ServiceURLs 는 XPlatform/MiPlatform 등 서비스 호출 URL 이다 (base_url 기준 상대 경로 가능).
+	// 조회성 서비스만 넣어야 하며, 저장·삭제·결재 등으로 보이는 이름은 검증에서 거부된다.
+	ServiceURLs []string `yaml:"service_urls"`
 }
+
+// unsafeServiceName 은 데이터 변경을 유발할 수 있는 서비스 이름 패턴이다.
+var unsafeServiceName = regexp.MustCompile(`(?i)(save|insert|update|upd|modify|delete|del[A-Z_./]|remove|approv|submit|exec|create|regist|reg[A-Z_./]|send|upload|cancel|confirm|batch|logout)`)
 
 type Allow struct {
 	CIDRs []string `yaml:"cidrs"`
@@ -55,6 +62,11 @@ type Auth struct {
 	PasswordField string `yaml:"password_field"`
 	Username      string `yaml:"username"`
 	PasswordEnv   string `yaml:"password_env"`
+	// CheckURL 은 로그인해야 열리는 페이지다. 로그인 성공 확인에 쓴다 (선택).
+	CheckURL string `yaml:"check_url"`
+	// LoggedOutPattern 은 세션 만료(로그아웃 상태) 응답을 판별하는 정규식이다 (선택).
+	// 비우면 로그인 페이지로 리다이렉트되거나 401 이면 만료로 본다.
+	LoggedOutPattern string `yaml:"logged_out_pattern"`
 }
 
 type Options struct {
@@ -186,6 +198,19 @@ func (c *Config) Validate() error {
 				add("targets[%d].ports 범위 오류: %d", i, p)
 			}
 		}
+		for _, su := range t.ServiceURLs {
+			ref, err := url.Parse(su)
+			if err != nil || u == nil {
+				add("targets[%d].service_urls 형식 오류: %q", i, su)
+				continue
+			}
+			if abs := u.ResolveReference(ref); !strings.EqualFold(abs.Hostname(), u.Hostname()) {
+				add("targets[%d].service_urls 는 base_url 과 같은 호스트여야 함: %q", i, su)
+			}
+			if unsafeServiceName.MatchString(ref.Path) {
+				add("targets[%d].service_urls 에 데이터 변경으로 보이는 서비스는 넣을 수 없음: %q (조회성 서비스만)", i, su)
+			}
+		}
 	}
 
 	if len(c.Allow.CIDRs) == 0 {
@@ -200,6 +225,17 @@ func (c *Config) Validate() error {
 	for i, a := range c.Auth {
 		if !names[a.Target] {
 			add("auth[%d].target 이 targets 에 없음: %q", i, a.Target)
+		}
+		if lu, err := url.Parse(a.LoginURL); err != nil || (lu.Scheme != "http" && lu.Scheme != "https") {
+			add("auth[%d].login_url 이 올바른 http(s) URL 이 아님: %q", i, a.LoginURL)
+		}
+		if a.Username == "" || a.UsernameField == "" || a.PasswordField == "" {
+			add("auth[%d].username / username_field / password_field 필수", i)
+		}
+		if a.LoggedOutPattern != "" {
+			if _, err := regexp.Compile(a.LoggedOutPattern); err != nil {
+				add("auth[%d].logged_out_pattern 정규식 오류: %v", i, err)
+			}
 		}
 		if a.Type != "form" {
 			add("auth[%d].type 지원하지 않음: %q (form 만 지원)", i, a.Type)

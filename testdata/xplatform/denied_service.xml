@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns="http://www.tobesoft.com/platform/Dataset" ver="4000">
+	<Parameters>
+		<Parameter id="ErrorCode" type="int">-1</Parameter>
+		<Parameter id="ErrorMsg" type="string">세션이 만료되었습니다.</Parameter>
+	</Parameters>
+</Root>
